@@ -129,7 +129,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-3"
+            "objectName": "spawn-6"
         },
         {
             //Main Room Left Wall
@@ -150,7 +150,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-4"
+            "objectName": "spawn-7"
         },
         {
             //Main Room Right Wall
@@ -171,7 +171,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-5"
+            "objectName": "spawn-8"
         },
         {
             //Main Room Front Wall
@@ -192,7 +192,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-6"
+            "objectName": "spawn-9"
         },
         {
             //Khaslana Room Left Wall
@@ -213,7 +213,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-7"
+            "objectName": "spawn-10"
         },
         {
             //Khaslana Room Right Wall
@@ -234,7 +234,28 @@
             ],
             "textureName": "WallBrick",
             "modelName": "Wall",
-            "objectName": "spawn-5"
+            "objectName": "spawn-11"
+        },
+        {
+            //Khaslana Room Back Wall
+            "position": [
+                0,
+                14.5,
+                -75
+            ],
+            "rotationDegrees": [
+                0,
+                0,
+                0
+            ],
+            "scale": [
+                25,
+                15,
+                10
+            ],
+            "textureName": "WallBrick",
+            "modelName": "Wall",
+            "objectName": "spawn-12"
         },
         {
             //Middle Piece
@@ -255,7 +276,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "MiddlePiece",
-            "objectName": "spawn-8"
+            "objectName": "spawn-13"
         },
         {
             //Mimin Room
@@ -276,7 +297,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "MimicWall",
-            "objectName": "spawn-9"
+            "objectName": "spawn-14"
         },
         {
             //Mimic Room
@@ -297,7 +318,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "MimicWall",
-            "objectName": "spawn-10"
+            "objectName": "spawn-15"
         },
         {
             //Mimic Room
@@ -318,7 +339,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "MimicWall",
-            "objectName": "spawn-11"
+            "objectName": "spawn-16"
         },
         {
             //Top Left Room
@@ -339,7 +360,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "TopLeftRoomWall",
-            "objectName": "spawn-12"
+            "objectName": "spawn-17"
         },
         {
             //Top Left Room
@@ -360,7 +381,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "TopLeftRoomWall",
-            "objectName": "spawn-13"
+            "objectName": "spawn-18"
         },
         {
             //Top Left Room
@@ -381,7 +402,7 @@
             ],
             "textureName": "WallBrick",
             "modelName": "TopLeftRoomWall",
-            "objectName": "spawn-14"
+            "objectName": "spawn-19"
         },
         {
             //Khaslana
@@ -402,7 +423,7 @@
             ],
             "textureName": "mona lisa",
             "modelName": "khaslana",
-            "objectName": "spawn-15"
+            "objectName": "spawn-20"
         }
 
 
