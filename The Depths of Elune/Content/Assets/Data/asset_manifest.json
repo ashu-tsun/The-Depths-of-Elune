@@ -21,7 +21,7 @@
     "textures": [
         {
             "name": "ground",
-            "contentPath": "assets/textures/foliage/ground/stone"
+            "contentPath": "assets/textures/architecture/room/stone"
         },
 
         {
@@ -38,11 +38,11 @@
         },
         {
             "name": "celeste_texture",
-            "contentPath": "assets/textures/celeste_texture"
+            "contentPath": "assets/textures/props/characters/celeste_texture"
         },
         {
             "name": "chest_texture",
-            "contentPath": "assets/textures/chest_texture"
+            "contentPath": "assets/textures/props/characters/chest_texture"
         },
         {
             "name": "sky",
@@ -50,25 +50,8 @@
         },
 
         {
-            "name": "crate1",
-            "contentPath": "assets/textures/props/crates/crate1"
-        },
-        {
-            "name": "tree4",
-            "contentPath": "assets/textures/foliage/trees/tree4"
-        },
-
-        {
-            "name": "checkerboard",
-            "contentPath": "assets/textures/demo/checkerboard"
-        },
-        {
-            "name": "mona lisa",
-            "contentPath": "assets/textures/demo/mona lisa"
-        },
-        {
             "name": "WallBrick",
-            "contentPath": "assets/textures/WallBrick"
+            "contentPath": "assets/textures/architecture/room/WallBrick"
         },
 
         {
@@ -90,22 +73,7 @@
         }
     ],
     "models": [
-        {
-            "name": "monkey1",
-            "contentPath": "assets/models/monkey1"
-        },
-        {
-            "name": "cube",
-            "contentPath": "assets/models/cube"
-        },
-        {
-            "name": "teapot",
-            "contentPath": "assets/models/teapot"
-        },
-        {
-            "name": "teapot_lowpoly",
-            "contentPath": "assets/models/teapot_lowpoly"
-        },
+       
         {
             "name": "celeste",
             "contentPath": "assets/models/celeste"
@@ -121,11 +89,7 @@
         {
             "name": "closedChest",
             "contentPath": "assets/models/ClosedChest"
-        },
-        {
-            "name": "plane",
-            "contentPath": "assets/models/plane"
-        },
+        },       
         {
             "name": "Wall",
             "contentPath": "assets/models/Wall"
