@@ -5,6 +5,7 @@ using GDEngine.Core.Audio;
 using GDEngine.Core.Audio.Events;
 using GDEngine.Core.Collections;
 using GDEngine.Core.Components;
+using GDEngine.Core.Components.Controllers;
 using GDEngine.Core.Debug;
 using GDEngine.Core.Entities;
 using GDEngine.Core.Events;
@@ -36,6 +37,7 @@ using Material = GDEngine.Core.Rendering.Material;
 using SamplerState = Microsoft.Xna.Framework.Graphics.SamplerState;
 using Time = GDEngine.Core.Timing.Time;
 using Transform = GDEngine.Core.Components.Transform;
+
 
 namespace The_Depths_of_Elune
 {
@@ -154,7 +156,7 @@ namespace The_Depths_of_Elune
             _soundEffect = _soundDictionary.Get("secret_door");
         }
 
-      
+
 
         private void InitializePlayer()
         {
@@ -172,7 +174,7 @@ namespace The_Depths_of_Elune
             player.AddComponent<InventoryComponent>();
         }
 
-      
+
 
         private void InitializeAnimationCurves()
         {
@@ -577,7 +579,7 @@ namespace The_Depths_of_Elune
                  20);
 
 
-            gameObject.Transform.ScaleBy(new Vector3(scale*3, scale*3, 1));
+            gameObject.Transform.ScaleBy(new Vector3(scale * 3, scale * 3, 1));
             gameObject.Transform.RotateEulerBy(new Vector3(MathHelper.ToRadians(-90), 0, 0), true);
             gameObject.Transform.TranslateTo(new Vector3(0, -0.5f, 0));
 
@@ -604,7 +606,7 @@ namespace The_Depths_of_Elune
             InitializeUIReticleRenderer();
         }
 
-       
+
 
         private void InitializeUIReticleRenderer()
         {
@@ -698,7 +700,7 @@ namespace The_Depths_of_Elune
 
             return gameObject;
         }
-        
+
         protected override void Update(GameTime gameTime)
         {
             //call time update
@@ -1003,7 +1005,7 @@ namespace The_Depths_of_Elune
             GameObject celeste = new GameObject("celeste");
 
             // A unit quad facing +Z (the factory already supplies lit quad with UVs)
-            celeste = InitializeModel(new Vector3(16, -0.5f, -15), new Vector3(-90, -180, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste","celeste");
+            celeste = InitializeModel(new Vector3(16, -0.5f, -15), new Vector3(-90, -180, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", "celeste");
 
             var textureRenderer = celeste.AddComponent<MeshRenderer>();
             textureRenderer.Material = _char;
@@ -1041,16 +1043,85 @@ namespace The_Depths_of_Elune
             GameObject chestClosed = new GameObject("chestClosed");
 
             // A unit quad facing +Z (the factory already supplies lit quad with UVs)
-            chestClosed = InitializeModel(new Vector3(-50, -0.5f, 13), new Vector3(-90, 0, 20), new Vector3(3, 3, 3), "chest_texture", "ClosedChest", "chest");
+            // defines a set of closed chests with ids and weather its a mimic or not
+            var chestsClosed = new[]
+           {
+                new { Position = new Vector3(-40, -0.5f, 13), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(3,3,3), ID = "Chest_01", IsMimic = false, HasJustOpened = false },
+                new { Position = new Vector3(-40, -0.5f, 18), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(3,3,3), ID = "Chest_02", IsMimic = true , HasJustOpened = false},
+                new { Position = new Vector3(-40, -0.5f, 23), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(3,3,3), ID = "Chest_03", IsMimic = true, HasJustOpened = false}
+           };
 
-            textureRenderer = chestClosed.AddComponent<MeshRenderer>();
-            textureRenderer.Material = _char;
+            foreach (var c in chestsClosed)
+            {
+                //initialize the chest GO with the specified transform and model
+                GameObject chestGO = InitializeModel(c.Position, c.Rotation, c.Scale, "chest_texture", "ClosedChest", c.ID);
 
-            // Per-object properties via the overrides block
-            textureRenderer.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
-            _scene.Add(chestClosed);
+               
+
+                //set the material and texture for the chest
+                var chestMesh = chestGO.GetComponent<MeshRenderer>();
+                chestMesh.Material = _char;
+                chestMesh.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
+
+                //add the ChestController 
+                var chestController = chestGO.AddComponent<ChestController>();
+                chestController.ChestID = c.ID;
+                chestController.IsReal = !c.IsMimic; //real if not mimic
+                chestController.Scene = _scene;
+
+                //stores original transform so we can rebuild it later
+                chestController.OriginalPosition = c.Position;
+                chestController.OriginalRotation = c.Rotation;
+                chestController.OriginalScale = c.Scale;
+
+                //assigns method for model replacement 
+                chestController.OnReplaceModel = ReplaceChestModel;
+
+                //if the chest is set to open
+                if (c.HasJustOpened)
+                {
+                    //calls the method to replace the model
+                    ReplaceChestModel(chestController);
+
+                }
+
+                _scene.Add(chestGO);
+
+                // Per-object properties via the overrides block
+                textureRenderer.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
+
+            }
+        }
+        private void ReplaceChestModel(ChestController controller)
+        {
+            //removing the chest from the scene for replacement
+            _scene.Remove(controller.GameObject);
+
+            //building the new chest with same pos/rot/scale and ID but change model based on if its normal or mimic
+            if (controller.IsReal)
+            {
+                var newChest = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "chest_texture", "Chest", controller.ChestID);
+               
+                // give it renderer
+                var renderer = newChest.AddComponent<MeshRenderer>();
+                renderer.Material = _char;
+
+                _scene.Add(newChest);
+            }
+            else
+            {
+                var newChest = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "chest_texture", "Mimic", controller.ChestID);
+               
+                // give it renderer
+                var renderer = newChest.AddComponent<MeshRenderer>();
+                renderer.Material = _char;
+
+                _scene.Add(newChest);
+            }
+
         }
         #endregion
-
     }
+
+    
 }
