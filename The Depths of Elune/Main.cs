@@ -28,6 +28,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SharpDX.Direct2D1;
+using SharpDX.Direct2D1.Effects;
 using SharpDX.Direct3D9;
 using The_Depths_of_Elune;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
@@ -162,7 +163,7 @@ namespace The_Depths_of_Elune
         {
             GameObject player = InitializeModel(new Vector3(0, 0, 0),
                 new Vector3(-90, 0, 0),
-                new Vector3(1, 1, 1), "checkerboard", "celeste", AppData.PLAYER_NAME);
+                new Vector3(1, 1, 1), "sky", "celeste", AppData.PLAYER_NAME);
 
             var simpleDriveController = new SimpleDriveController();
             player.AddComponent(simpleDriveController);
@@ -456,6 +457,7 @@ namespace The_Depths_of_Elune
             // Set the active camera by finding and getting its camera component
             var theCamera = _scene.Find(go => go.Name.Equals(AppData.CAMERA_NAME_FIRST_PERSON)).GetComponent<Camera>();
             ////Obviously, since we have _camera we could also just use the line below
+
             _scene.SetActiveCamera(theCamera);
         }
 
@@ -1007,11 +1009,36 @@ namespace The_Depths_of_Elune
             // A unit quad facing +Z (the factory already supplies lit quad with UVs)
             celeste = InitializeModel(new Vector3(16, -0.5f, -15), new Vector3(-90, -180, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", "celeste");
 
+
+            var celesteController = celeste.AddComponent<CharacterController>();
+            celesteController.HasJustSpoken = false;
+            celesteController.Scene = _scene;
+            celesteController.CharID = "celeste";
+
             var textureRenderer = celeste.AddComponent<MeshRenderer>();
             textureRenderer.Material = _char;
 
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("celeste_texture");
+            _scene.Add(celeste);
+
+            //Khaslana
+            GameObject khaslana = new GameObject("khaslana");
+
+            // A unit quad facing +Z (the factory already supplies lit quad with UVs)
+            khaslana = InitializeModel(new Vector3(20, 3f, -10), new Vector3(-90, 0, 0), new Vector3(1, 0.8f, 2), "khaslana_texture", "khaslana", "khaslana");
+
+            var khaslanaController = khaslana.AddComponent<CharacterController>();
+            khaslanaController.HasJustSpoken = false;
+            khaslanaController.Scene = _scene;
+            khaslanaController.CharID = "khaslana";
+
+            textureRenderer = khaslana.AddComponent<MeshRenderer>();
+            textureRenderer.Material = _char;
+
+            // Per-object properties via the overrides block
+            textureRenderer.Overrides.MainTexture = _textureDictionary.Get("khaslana_texture");
+            _scene.Add(khaslana);
 
             //mimic         
             GameObject mimic = new GameObject("mimic");
@@ -1110,6 +1137,8 @@ namespace The_Depths_of_Elune
             }
             else
             {
+                var events = EngineContext.Instance.Events;
+                events.Publish(new PlaySfxEvent("Bad Ending",1, false, null));
                 var newChest = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "chest_texture", "Mimic", controller.ChestID);
                
                 // give it renderer

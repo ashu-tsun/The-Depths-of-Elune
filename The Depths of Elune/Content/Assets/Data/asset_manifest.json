@@ -23,7 +23,6 @@
             "name": "ground",
             "contentPath": "assets/textures/architecture/room/stone"
         },
-
         {
             "name": "skybox_back",
             "contentPath": "assets/textures/skybox/back"
@@ -43,6 +42,10 @@
         {
             "name": "chest_texture",
             "contentPath": "assets/textures/props/characters/chest_texture"
+        },
+        {
+            "name": "khaslana_texture",
+            "contentPath": "assets/textures/props/characters/khaslana_texture"
         },
         {
             "name": "sky",
@@ -139,40 +142,44 @@
             "contentPath": "assets/models/khaslana"
         }
     ],
-  "sounds": [
-    {
-      "name": "explosion1",
-      "contentPath": "assets/sounds/Explosion 1"
-    },
-    {
-      "name": "hand_gun1",
-      "contentPath": "assets/sounds/Hand Gun 1"
-    },
-    {
-      "name": "laser_gun_salve",
-      "contentPath": "assets/sounds/Laser Gun Salve"
-    },
-    {
-      "name": "secret_door",
-      "contentPath": "assets/sounds/Secret door"
-    },
-    {
-      "name": "SFX_UI_Click_Designed_Pop_Generic_1",
-      "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Generic_1"
-    },
-    {
-      "name": "SFX_UI_Click_Designed_Pop_Mallet_Open_1",
-      "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Mallet_Open_1"
-    },
-    {
-      "name": "SFX_UI_Click_Designed_Pop_Movement_Open_1",
-      "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Movement_Open_1"
-    },
-    {
-      "name": "SFX_UI_Click_Designed_Pop_Negative_Close_1",
-      "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Negative_Close_1"
-    }
-  ],
+    "sounds": [
+        {
+            "name": "explosion1",
+            "contentPath": "assets/sounds/Explosion 1"
+        },
+        {
+            "name": "hand_gun1",
+            "contentPath": "assets/sounds/Hand Gun 1"
+        },
+        {
+            "name": "laser_gun_salve",
+            "contentPath": "assets/sounds/Laser Gun Salve"
+        },
+        {
+            "name": "secret_door",
+            "contentPath": "assets/sounds/Secret door"
+        },
+        {
+            "name": "SFX_UI_Click_Designed_Pop_Generic_1",
+            "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Generic_1"
+        },
+        {
+            "name": "SFX_UI_Click_Designed_Pop_Mallet_Open_1",
+            "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Mallet_Open_1"
+        },
+        {
+            "name": "SFX_UI_Click_Designed_Pop_Movement_Open_1",
+            "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Movement_Open_1"
+        },
+        {
+            "name": "Bad Ending",
+            "contentPath": "assets/sounds/Bad Ending"
+        },
+        {
+            "name": "SFX_UI_Click_Designed_Pop_Negative_Close_1",
+            "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Negative_Close_1"
+        }
+    ],
   "effects": [ {
     "name": "ui_test_effect",
     "contentPath": "assets/effects/ui/ui_test_effect"
