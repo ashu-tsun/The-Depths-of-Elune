@@ -6,6 +6,7 @@ using The_Depths_of_Elune.UI;
 namespace The_Depths_of_Elune.UI
 {
     //Manages how dialogue occurs, progresses and ends
+    //https://www.reddit.com/r/gamedev/comments/1gqk7nx/what_is_the_correct_method_to_handle_dialogue/
     public class DialogueManager : Component
     {
         #region Fields

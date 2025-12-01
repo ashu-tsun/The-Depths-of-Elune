@@ -7,7 +7,8 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace The_Depths_of_Elune.UI
 {
-
+    //UI Element to draw an onscreen dialogue box
+    //https://github.com/Andrux51/MonoGame-Tutorial-DialogBox/blob/master/MonoGame-Tutorial-DialogBox/DialogBox.cs
     public class DialogueBox : UIRenderer
     {
         #region Fields
@@ -16,7 +17,7 @@ namespace The_Depths_of_Elune.UI
         private SpriteFont _dialogueFont;
         private Texture2D _portraitTexture;
         private Rectangle _portraitRect;
-        private Dictionary<string, Texture2D> _portraitLookup;
+        private Dictionary<string, Texture2D> _portraits;
         private bool _isVisible;
         //Initialize with nothing in it
         private string _currentText = "";
@@ -34,7 +35,7 @@ namespace The_Depths_of_Elune.UI
         #endregion
 
         #region Constructor
-        public DialogueBox(SpriteFont nameFont, SpriteFont dialogueFont, Texture2D dialogueTexture, GraphicsDevice graphicsDevice, Rectangle boxSize, Dictionary<string, Texture2D> portraitLookup)
+        public DialogueBox(SpriteFont nameFont, SpriteFont dialogueFont, Texture2D dialogueTexture, GraphicsDevice graphicsDevice, Rectangle boxSize, Dictionary<string, Texture2D> portraits)
         {
             _nameFont = nameFont;
             _dialogueFont = dialogueFont;
@@ -42,7 +43,7 @@ namespace The_Depths_of_Elune.UI
             _graphicsDevice = graphicsDevice;
             _backgroundTexture = dialogueTexture;
 
-            _portraitLookup = portraitLookup;
+            _portraits = portraits;
 
             LayerDepth = UILayer.HUD;
         }
@@ -56,12 +57,14 @@ namespace The_Depths_of_Elune.UI
             _currentText = text;
             _isVisible = true;
 
-            // Auto-assign portrait based on speaker
-            if (_portraitLookup != null && _portraitLookup.ContainsKey(speakerName))
+            //Look for the characters name in the portraits
+            if (_portraits != null && _portraits.ContainsKey(speakerName))
             {
-                _portraitTexture = _portraitLookup[speakerName];
+                //Assign the right portrait
+                _portraitTexture = _portraits[speakerName];
 
                 int portraitSize = 120;
+                //Create a rectangle for where the portrait will be 
                 _portraitRect = new Rectangle(
                     _boxSize.X + 20,
                     _boxSize.Y + _boxSize.Height - portraitSize - 20,
@@ -96,29 +99,24 @@ namespace The_Depths_of_Elune.UI
             {
                 return;
             }
-            //Picture in bottom left
-            if (_portraitTexture != null)
-            {
-                _spriteBatch.Draw(
-                    _portraitTexture,
-                    _portraitRect,
-                    null,
-                    Color.White,
-                    0f,
-                    Vector2.Zero,
-                    SpriteEffects.None,
-                    UILayer.HUD
-                );
-            }
 
-            // Dialogue box
+
+            //Dialogue box
             _spriteBatch.Draw(_backgroundTexture, _boxSize, null, Color.White,
                 0f, Vector2.Zero, SpriteEffects.None, UILayer.Background);
 
-            _spriteBatch.DrawString(_nameFont, "Press F to continue", new Vector2(_boxSize.Width-200, _boxSize.Height+470), Color.MediumPurple,
+            //Add the picture in bottom left
+            if (_portraitTexture != null)
+            {
+                _spriteBatch.Draw(_portraitTexture, _portraitRect, null, Color.White,
+                    0f, Vector2.Zero, SpriteEffects.None, UILayer.HUD);
+            }
+
+            //Hint message
+            _spriteBatch.DrawString(_nameFont, "Press F to continue", new Vector2(_boxSize.X +_boxSize.Width-250,_boxSize.Y + _boxSize.Height), Color.White,
                 0f, Vector2.Zero, 1f, SpriteEffects.None, UILayer.HUD);
 
-            // NPC name
+            //NPC name
             if (!string.IsNullOrEmpty(_speakerName))
             {
                 Vector2 namePos = new Vector2(_boxSize.X + 40, _boxSize.Y + 10);
@@ -139,46 +137,52 @@ namespace The_Depths_of_Elune.UI
                 }
             }
 
+            string _wrappedText = WrapText(_dialogueFont, _currentText, _boxSize.Width - 200);
             // Dialogue text
             if (!string.IsNullOrEmpty(_currentText))
             {
                 Vector2 textPos = new Vector2(_boxSize.X + 170, _boxSize.Y + 60);
-                _currentText = WrapText(_dialogueFont, _currentText, _boxSize.Width - 250);
-                _spriteBatch.DrawString(_dialogueFont, _currentText, textPos, Color.White,
+                
+                _spriteBatch.DrawString(_dialogueFont, _wrappedText, textPos, Color.White,
                     0f, Vector2.Zero, 1f, SpriteEffects.None, UILayer.HUD);
             }
         }
 
-        private string WrapText(SpriteFont font, string text, float maxLineWidth)
+        //https://stackoverflow.com/questions/15986473/how-do-i-implement-word-wrap
+        public string WrapText(SpriteFont spriteFont, string text, float maxLineWidth)
         {
+            //Split the line into words
             string[] words = text.Split(' ');
-            string wrappedText = "";
-            string line = "";
+            StringBuilder sb = new StringBuilder();
+            //Line length
+            float lineWidth = 0f;
+            //Space width
+            float spaceWidth = spriteFont.MeasureString(" ").X;
 
-            foreach (var word in words)
+            foreach (string word in words)
             {
-                // Measure the line if this word is added
-                string testLine = (line.Length == 0) ? word : line + " " + word;
-                float lineWidth = font.MeasureString(testLine).X;
+                //Measure the size of the word using the specific font
+                Vector2 size = spriteFont.MeasureString(word);
 
-                if (lineWidth > maxLineWidth)
+                //Check if adding the word to the current line would fit in the box
+                if (lineWidth + size.X < maxLineWidth)
                 {
-                    // Commit the current line and start a new one
-                    wrappedText += line + "\n";
-                    line = word;
+                    //Add the word and adjust the line width
+                    sb.Append(word + " ");
+                    lineWidth += size.X + spaceWidth;
                 }
                 else
                 {
-                    line = testLine;
+                    //If it doesnt fit then move it to the next line.
+                    sb.Append("\n" + word + " ");
+                    //Reset the line width
+                    lineWidth = size.X + spaceWidth;
                 }
             }
 
-            // Add the final line
-            wrappedText += line;
-
-            return wrappedText;
+            return sb.ToString();
         }
-        #endregion
+                #endregion
 
     }
 }

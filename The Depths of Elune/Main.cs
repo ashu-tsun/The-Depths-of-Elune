@@ -611,7 +611,7 @@ namespace The_Depths_of_Elune
         private void InitializeUI()
         {
             InitializeUIReticleRenderer();
-            InitializeUIText();
+            InitializeUIDialogue();
         }
 
 
@@ -637,21 +637,26 @@ namespace The_Depths_of_Elune
             IsMouseVisible = false;
         }
 
-        private void InitializeUIText()
+        #region UI Dialogue
+        private void InitializeUIDialogue()
         {
             var dialogueFont = _fontDictionary.Get("menuFont");
             var nameFont = _fontDictionary.Get("dialoguefont");
+
             int boxHeight = 200;
             int boxWidth = _graphics.PreferredBackBufferWidth - 100;
+
+            //Create a rectangle to store the size of the dialogue box
             Rectangle dialogueBox = new Rectangle(
                 50,
                 _graphics.PreferredBackBufferHeight - boxHeight - 50,
                 boxWidth,
                 boxHeight
             );
+            //Background image
             Texture2D dialogueTexture = _textureDictionary.Get("dialogue_texture");
 
-
+            //Store the character pictures and their names
             var portraits = new Dictionary<string, Texture2D>()
 {
             { "Elysia", _textureDictionary.Get("elysia_portrait") },
@@ -659,16 +664,17 @@ namespace The_Depths_of_Elune
             { "Khaslana", _textureDictionary.Get("khaslana_portrait") }
 };
 
+            //Create the dialogue box
             _dialogueBox = new DialogueBox(nameFont,dialogueFont, dialogueTexture, GraphicsDevice, dialogueBox,portraits);
 
-            var dialogueGO = new GameObject("Dialogue System");
+            var dialogueGO = new GameObject("dialogueBox");
             _dialogueManager = new DialogueManager(_dialogueBox);
             dialogueGO.AddComponent(_dialogueManager);
             dialogueGO.AddComponent(_dialogueBox);
 
             _scene.Add(dialogueGO);
         }
-
+        #endregion
 
         /// <summary>
         /// Adds a single-part FBX model into the scene.
@@ -802,11 +808,11 @@ namespace The_Depths_of_Elune
         private void DemoStuff()
         {
             _newKBState = Keyboard.GetState();
-            DemoEventPublish();
+            //DemoEventPublish();
             DemoCameraSwitch();
             DemoToggleFullscreen();
-            DemoAudioSystem();
-            DemoOrchestrationSystem();
+            //DemoAudioSystem();
+            //DemoOrchestrationSystem();
             _oldKBState = _newKBState;
         }
 
@@ -1232,7 +1238,7 @@ namespace The_Depths_of_Elune
             else
             {
                 var events = EngineContext.Instance.Events;
-                events.Publish(new PlaySfxEvent("Bad Ending",1, false, null));
+               // events.Publish(new PlaySfxEvent("Bad Ending",1, false, null));
                 var newChest = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "chest_texture", "Mimic", controller.ChestID);
                
                 // give it renderer

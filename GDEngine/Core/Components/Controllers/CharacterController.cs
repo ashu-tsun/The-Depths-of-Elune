@@ -169,7 +169,7 @@ namespace GDEngine.Core.Components.Controllers
                 else if (timesSpoken % 2 == 0)
                 {
                     System.Diagnostics.Debug.WriteLine("Talked to Khaslana for the " + timesSpoken + " time");
-                    dialogue.Add(new DialogueLine("Khaslana", "aaaaaa "));
+                    dialogue.Add(new DialogueLine("Khaslana", "Let's get out of here!"));
 
                 }
                 else
