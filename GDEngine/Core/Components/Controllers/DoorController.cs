@@ -17,21 +17,26 @@ using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace GDEngine.Core.Components.Controllers
 {
-    public sealed class ChestController : Component
+    public sealed class DoorController : Component
     {
         #region Fields
         private Transform? _transform;
-        private MeshRenderer? _mesh;
+        private Transform? _playerTransform;
         private Scene? _scene;
+
         private bool _playerNearby = false;
         private bool _isOpened = false;
 
-        private Transform? _playerTransform;
+        //check if door is locked
+        public bool IsLocked { get; set; } = false;
+
+        //differenciates the regular doors and the khaslana room door
+        public bool IsKhasDoor { get; set; } = false;
         #endregion
 
         #region Events
 
-        public Action<ChestController>? OnReplaceModel;
+        public Action<DoorController>? OnReplaceModel;
 
         #endregion
 
@@ -41,20 +46,14 @@ namespace GDEngine.Core.Components.Controllers
         public Vector3 OriginalPosition;
         public Vector3 OriginalRotation;
         public Vector3 OriginalScale;
-        public string ChestID { get; set; } = ""; 
 
-        //If true this is the real chest that gives a sigil.
-        //If false this chest is a mimic and kills the player.
-        public bool IsReal { get; set; } = false;
-        
-        //to check chest if it just opened
+        public string DoorID { get; set; } = "";
+
+        //to check door if it just opened
         public bool HasJustOpened { get; set; } = false;
 
-        //temp boolean hardcoding to be able to unlock door.
-        public static bool RecievedSigil = false;
-
-        //range for interacting with chest
-        public float Range { get; set; } = 5.0f;
+        //range for interacting with door
+        public float Range { get; set; } = 10.0f;
 
         public Scene? Scene { get => _scene; set => _scene = value; }
 
@@ -63,7 +62,7 @@ namespace GDEngine.Core.Components.Controllers
         #region Awake
         protected override void Awake()
         {
-           
+
 
             base.Awake();
         }
@@ -74,24 +73,22 @@ namespace GDEngine.Core.Components.Controllers
         {
             base.Update(deltaTime);
 
-            //TODO : possibly change it from active camera to player object in future
             //players transform from active camera for distance checks 
             _transform = GameObject.Transform;
-            _mesh = GameObject.GetComponent<MeshRenderer>();
             var cameraGO = _scene.GetActiveCamera().GameObject;
             _playerTransform = cameraGO.Transform;
 
-            //handling errors if chest or player transforms are not assigned yet
+            //handling errors if door or player transforms are not assigned yet
             if (_transform == null || _playerTransform == null)
                 return;
 
-            //getting the distance between chest and camera so when player is near it will only open then
-            //TODO: change the keys to E after the demo code is dealt with (E gives a weapon type into inventory and breaks)
+            //getting the distance between door and camera so when player is near it will only open it
+            //TODO: change the keys to E after the demo code is dealt with (E gives a weapon type into inventory atm)
             CheckPlayerDistance();
             var inputSystem = _scene.GetSystem<InputSystem>();
             if (!_isOpened && _playerNearby && Keyboard.GetState().IsKeyDown(Keys.F))
             {
-                OpenChest();
+                OpenDoor();
             }
 
 
@@ -114,57 +111,53 @@ namespace GDEngine.Core.Components.Controllers
             _playerNearby = distance <= Range;
         }
 
-        private void OpenChest()
+        private void OpenDoor()
         {
-            //makes sure the chest is not open already
+            //makes sure the door is not open already
             if (_isOpened)
                 return;
 
-            _isOpened = true;
-            HasJustOpened = true;
-
-            //test REMOVE LATER
-            System.Diagnostics.Debug.WriteLine("Chest opened");
-
-
-            if (IsReal)
+            //TODO: after inverntory is set up change it so its not hard coded
+            if (IsLocked && ChestController.RecievedSigil && IsKhasDoor)
             {
-                GiveSigil();
+                _isOpened = true;
+                HasJustOpened = true;
+
                 //test REMOVE LATER
-                //System.Diagnostics.Debug.WriteLine("YOU GOT A SIGIL");
+                System.Diagnostics.Debug.WriteLine("Door opened");
+
+
+                ChangeToOpenedModel();
+            }
+            else if(!IsLocked )
+            {
+                _isOpened = true;
+                HasJustOpened = true;
+
+                //test REMOVE LATER
+                System.Diagnostics.Debug.WriteLine("Door opened");
+
+
+                ChangeToOpenedModel();
             }
             else
             {
-                TriggerDeath();
-                //test REMOVE LATER
-                System.Diagnostics.Debug.WriteLine("MIMIC YOU DIE");
+                System.Diagnostics.Debug.WriteLine("Door is locked.");
+                return;
             }
-
-            ChangeToOpenedModel();
+                
         }
         #endregion
 
 
-
         #region Helpers
-        private void GiveSigil()
-        {
-
-            RecievedSigil = true;
-            System.Diagnostics.Debug.WriteLine("Sigil recieved!");
-            
-        }
-
-        private void TriggerDeath()
-        {
-            // TODO: death
-        }
-
+        
         private void ChangeToOpenedModel()
         {
             //triggers the OnReplaceModel event to replace the model
             OnReplaceModel?.Invoke(this);
         }
-            #endregion
-     }
+
+        #endregion
+    }
 }

@@ -64,6 +64,10 @@
             "name": "WallBrick",
             "contentPath": "assets/textures/architecture/room/WallBrick"
         },
+        {
+            "name": "DoorTexture",
+            "contentPath": "assets/textures/architecture/room/DoorTexture"
+        },
 
         {
             "name": "star",
@@ -180,6 +184,22 @@
         {
             "name": "TopLeftRoomWall3",
             "contentPath": "assets/models/TopLeftRoomWall2"
+        },
+        {
+            "name": "ClosedDoors",
+            "contentPath": "assets/models/Doors/ClosedDoors"
+        },
+        {
+            "name": "OpenDoors",
+            "contentPath": "assets/models/Doors/OpenDoors"
+        },
+        {
+            "name": "KhasDoorClosed",
+            "contentPath": "assets/models/Doors/KhasDoorClosed"
+        },
+        {
+            "name": "KhasDoorOpen",
+            "contentPath": "assets/models/Doors/KhasDoorOpen"
         },
         {
             "name": "khaslana",

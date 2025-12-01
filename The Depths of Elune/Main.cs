@@ -32,6 +32,7 @@ using Microsoft.Xna.Framework.Input;
 using SharpDX.Direct2D1;
 using SharpDX.Direct2D1.Effects;
 using SharpDX.Direct3D9;
+using SharpDX.XInput;
 using The_Depths_of_Elune;
 using The_Depths_of_Elune.UI;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
@@ -1109,9 +1110,107 @@ namespace The_Depths_of_Elune
 
                 _scene.Add(chestGO);
 
-                // Per-object properties via the overrides block
-                textureRenderer.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
+            }
 
+
+            // set of closed doors 
+            //TODO: add collisions to closed doors
+            //TODO: move this code to where the room will be initialized 
+            var DoorsClosed = new[]
+          {
+                //mimic room door (First door on the left)
+                new { Position = new Vector3(-26f, -1, 12.5f), Rotation = new Vector3(-90, -90, 0), Scale = new Vector3(0.30f,0.35f,0.35f), ID = "Door_01", IsLocked = false, HasJustOpened = false, IsKhasDoor = false },
+                //Second door on the left
+                new { Position = new Vector3(-26f, -1, -12.5f), Rotation = new Vector3(-90, -90, 0), Scale = new Vector3(0.30f,0.35f,0.35f), ID = "Door_02", IsLocked = false, HasJustOpened = false, IsKhasDoor = false },
+                //first door to the right
+                new { Position = new Vector3(26f, -1, 12.5f), Rotation = new Vector3(-90, -270, 0), Scale = new Vector3(0.30f,0.35f,0.35f), ID = "Door_03", IsLocked = true, HasJustOpened = false, IsKhasDoor = false},
+                 //first door to the right
+                new { Position = new Vector3(26f, -1, -12.5f), Rotation = new Vector3(-90, -270, 0), Scale = new Vector3(0.30f,0.35f,0.35f), ID = "Door_04", IsLocked = true, HasJustOpened = false, IsKhasDoor = false },
+                //Khaslana Door
+                new { Position = new Vector3(0, -1, -26f), Rotation = new Vector3(-90, -180, 0), Scale = new Vector3(0.35f,0.35f,0.35f), ID = "KhasDoor", IsLocked = true, HasJustOpened = false, IsKhasDoor = true }
+
+
+
+           };
+          
+
+            foreach (var d in DoorsClosed)
+            {
+                if(d.IsKhasDoor)
+                {
+                    //initialize the door GO with the specified transform and model
+                    GameObject doorGO = InitializeModel(d.Position, d.Rotation, d.Scale, "DoorTexture", "KhasDoorClosed", d.ID);
+
+
+
+                    //set the material and texture for the door
+                    var doorMesh = doorGO.GetComponent<MeshRenderer>();
+                    doorMesh.Material = _char;
+                    doorMesh.Overrides.MainTexture = _textureDictionary.Get("DoorTexture");
+
+                    //add the doorController 
+                    var doorController = doorGO.AddComponent<DoorController>();
+                    doorController.DoorID = d.ID;
+                    doorController.IsLocked = d.IsLocked;
+                    doorController.IsKhasDoor = d.IsKhasDoor;
+                    doorController.Scene = _scene;
+
+                    //stores original transform so we can rebuild it later
+                    doorController.OriginalPosition = d.Position;
+                    doorController.OriginalRotation = d.Rotation;
+                    doorController.OriginalScale = d.Scale;
+
+                    //assigns method for model replacement 
+                    doorController.OnReplaceModel = ReplaceDoorModel;
+
+                    //if the door is set to open
+                    if (d.HasJustOpened)
+                    {
+                        //calls the method to replace the model
+                        ReplaceDoorModel(doorController);
+
+                    }
+
+                    _scene.Add(doorGO);
+                }
+            
+                else
+                {
+                    //initialize the door GO with the specified transform and model
+                    GameObject doorGO = InitializeModel(d.Position, d.Rotation, d.Scale, "DoorTexture", "ClosedDoors", d.ID);
+
+
+
+                    //set the material and texture for the door
+                    var doorMesh = doorGO.GetComponent<MeshRenderer>();
+                    doorMesh.Material = _char;
+                    doorMesh.Overrides.MainTexture = _textureDictionary.Get("DoorTexture");
+
+                    //add the doorController 
+                    var doorController = doorGO.AddComponent<DoorController>();
+                    doorController.DoorID = d.ID;
+                    doorController.IsLocked = d.IsLocked;
+                    doorController.IsKhasDoor = d.IsKhasDoor;
+                    doorController.Scene = _scene;
+
+                    //stores original transform so we can rebuild it later
+                    doorController.OriginalPosition = d.Position;
+                    doorController.OriginalRotation = d.Rotation;
+                    doorController.OriginalScale = d.Scale;
+
+                    //assigns method for model replacement 
+                    doorController.OnReplaceModel = ReplaceDoorModel;
+
+                    //if the door is set to open
+                    if (d.HasJustOpened)
+                    {
+                        //calls the method to replace the model
+                        ReplaceDoorModel(doorController);
+
+                    }
+
+                    _scene.Add(doorGO);
+                }
             }
         }
         private void ReplaceChestModel(ChestController controller)
@@ -1146,7 +1245,43 @@ namespace The_Depths_of_Elune
         }
         #endregion
 
+        private void ReplaceDoorModel(DoorController controller)
+        {
+            //remove the object from scene
+            _scene.Remove(controller.GameObject);
 
+            //checks weather its the khaslana door or a regular door so it replaces the correct model
+            if (controller.IsKhasDoor)
+            {
+                if (!controller.IsLocked)
+                {
+                    var newDoor = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "DoorTexture", "KhasDoorOpen", controller.DoorID);
+                    // give it renderer
+                    var rend = newDoor.AddComponent<MeshRenderer>();
+                    rend.Material = _char;
+                    _scene.Add(newDoor);
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (!controller.IsLocked)
+                {
+                    var newDoor = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "DoorTexture", "OpenDoors", controller.DoorID);
+                    // give it renderer
+                    var rend = newDoor.AddComponent<MeshRenderer>();
+                    rend.Material = _char;
+                    _scene.Add(newDoor);
+                }
+                else
+                {
+                    return;
+                }
+            }
+        }
         private void DemoCollidableModel(Vector3 position, Vector3 eulerRotationDegrees, Vector3 scale)
         {
             var go = new GameObject("test");
@@ -1174,7 +1309,5 @@ namespace The_Depths_of_Elune
             rigidBody.BodyType = BodyType.Dynamic;
             rigidBody.Mass = 1.0f;
         }
-    }
-
-    
+    }    
 }
