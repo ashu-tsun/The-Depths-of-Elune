@@ -137,6 +137,7 @@ namespace The_Depths_of_Elune
             InitializeAnimationCurves();
             LoadFromJSON();
             InitializeCharacters();
+            InitializeRoom();
             DemoOrchestrationSystem();
             //Main Room
             DemoCollidableModel(new Vector3(0, 10, 0), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f));
@@ -1233,6 +1234,138 @@ namespace The_Depths_of_Elune
                     _scene.Add(doorGO);
                 }
             }
+        }
+
+        private void InitializeRoom()
+        {
+            //Main Room Back Wall
+            GameObject MainBackWall = new GameObject("BigDoorWall");
+            MainBackWall = InitializeModel(new Vector3(0, -0.5f, -25), new Vector3(270, 0, 0), new Vector3(0.3065f, 0.3065f, 0.3065f), "DoorWall", "BigDoorWall", "MainBackWall");
+            
+            //set the material and texture for the door
+            var textureRenderer = MainBackWall.GetComponent<MeshRenderer>();
+            textureRenderer.Material = _char;
+            textureRenderer.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
+
+            _scene.Add(MainBackWall);
+
+
+            //Ceiling Main
+            GameObject CeilingMainRoom = new GameObject("CeilingMainRoom");
+            CeilingMainRoom = InitializeModel(new Vector3(0, 29.89f, 0), new Vector3(-90, 0, 0), new Vector3(15, 15, 0.5f), "BlankWall", "CeilingMainRoom", "CeilingMainRoom");
+            
+            //set the material and texture for the door
+            textureRenderer = CeilingMainRoom.GetComponent<MeshRenderer>();
+            textureRenderer.Material = _char;
+            textureRenderer.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
+
+            _scene.Add(CeilingMainRoom);
+
+
+            var SideDoorWalls = new[]
+            {
+                //Main Room Left Wall
+                new { Position = new Vector3(-24.7f, -0.5f, 0), Rotation = new Vector3(270, 0, 90), Scale = new Vector3(0.3065f,0.3065f,0.3065f), ID = "MainLeftWall"},
+                //Main Room Right Wall
+                new { Position = new Vector3(24.75f, -0.5f, 0), Rotation = new Vector3(-90, 270, 0), Scale = new Vector3(0.3065f,0.3065f,0.3065f), ID = "MainRightWall"}
+               
+
+           };
+
+            foreach (var w in SideDoorWalls)
+            {
+                GameObject wallGO = InitializeModel(w.Position, w.Rotation, w.Scale, "WallBrick", "DoorWall", w.ID);
+
+                //set the material and texture for the door
+                var wallMesh = wallGO.GetComponent<MeshRenderer>();
+                wallMesh.Material = _char;
+                wallMesh.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
+
+                // Add a box collider matching the ground size
+                var collider = wallGO.AddComponent<BoxCollider>();
+                collider.Size = new Vector3(0.3065f, 0.3065f, 0.3065f);
+                collider.Center = new Vector3(0, 0, -0.0125f);
+
+                // Add rigidbody as Static (immovable)
+                var rigidBody = wallGO.AddComponent<RigidBody>();
+                rigidBody.BodyType = BodyType.Static;
+                wallGO.IsStatic = true;
+
+                _scene.Add(wallGO);
+            }
+
+            var Walls = new[]
+            {
+                //Main Room Front Wall
+                new { Position = new Vector3(0, 14.5f, 25), Rotation = new Vector3(180, 180, 0), Scale = new Vector3(25.1f, 14.9f, 0.74f), ID = "MainFrontWall"},
+                
+                //Khaslana Room Left Wall
+                new { Position = new Vector3(-25.75f, 14.5f, -50), Rotation = new Vector3(0, -90, 0), Scale = new Vector3(24.26f, 14.9f, 0.74f), ID = "KhaslanaLeftWall"},
+                //Khaslana Room Right Wall
+                new { Position = new Vector3(25.75f, 14.5f, -50), Rotation = new Vector3(0, 90, 0), Scale = new Vector3(24.26f, 14.9f, 0.74f), ID = "KhaslanaRightWall"},
+                //Khaslana Room Back Wall
+                new { Position = new Vector3(0, 14.5f, -75), Rotation = new Vector3(0, 180, 0), Scale = new Vector3(25.1f, 14.9f, 0.74f), ID = "KhaslanaBackWall"},
+                
+                //Left Rooms Front Wall
+                new { Position = new Vector3(-42.85f, 14.5f, 25), Rotation = new Vector3(180, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "LeftRoomsFrontWall"},
+                //Left Rooms Back Wall
+                new { Position = new Vector3(-42.85f, 14.5f, -25), Rotation = new Vector3(0, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "LeftRoomsBackWall"},
+                //Left Rooms Left Wall
+                new { Position = new Vector3(-60, 14.5f, 0), Rotation = new Vector3(0, -90, 0), Scale = new Vector3(25.1f, 14.9f, 0.74f), ID = "LeftRoomsLeftWall"},
+                //Left Rooms Divider Wall
+                new { Position = new Vector3(-42.85f, 14.5f, 0), Rotation = new Vector3(0, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "LeftRoomsDividerWall"},
+                
+                //Right Rooms Front Wall
+                new { Position = new Vector3(42.85f, 14.5f, 25), Rotation = new Vector3(180, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "RightRoomsFrontWall"},
+                //Right Rooms Back Wall
+                new { Position = new Vector3(42.85f, 14.5f, -25), Rotation = new Vector3(0, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "RightRoomsBackWall"},
+                //Right Rooms Left Wall
+                new { Position = new Vector3(60, 14.5f, 0), Rotation = new Vector3(0, -90, 0), Scale = new Vector3(25.1f, 14.9f, 0.74f), ID = "RightRoomsLeftWall"},
+                //Right Rooms Divider Wall
+                new { Position = new Vector3(42.85f, 14.5f, 0), Rotation = new Vector3(0, 180, 0), Scale = new Vector3(16.4f, 14.9f, 0.74f), ID = "RightRoomsDividerWall"}
+
+           };
+
+            foreach (var w in Walls)
+            {
+                GameObject wallGO = InitializeModel(w.Position, w.Rotation, w.Scale, "WallBrick", "BlankWall", w.ID);
+
+                //set the material and texture for the door
+                var wallMesh = wallGO.GetComponent<MeshRenderer>();
+                wallMesh.Material = _char;
+                wallMesh.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
+
+
+
+                _scene.Add(wallGO);
+            }
+
+            var Ceilings = new[]
+            {
+                //Ceiling Left
+                new { Position = new Vector3(-43.5f, 29.45f, 0), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(0.34f, 0.5f, 0.5f), ID = "CeilingLeft"},
+                //Ceiling Right
+                new { Position = new Vector3(43.5f, 29.45f, 0), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(0.34f, 0.5f, 0.5f), ID = "CeilingRight"},
+                //Ceiling Khaslana
+                new { Position = new Vector3(0, 29.4f, -50), Rotation = new Vector3(-90, 0, 0), Scale = new Vector3(0.5f, 0.48f, 0.5f), ID = "CeilingKhaslana"}
+
+           };
+
+            foreach (var w in Ceilings)
+            {
+                GameObject wallGO = InitializeModel(w.Position, w.Rotation, w.Scale, "WallBrick", "CeilingRooms", w.ID);
+
+                //set the material and texture for the door
+                var wallMesh = wallGO.GetComponent<MeshRenderer>();
+                wallMesh.Material = _char;
+                wallMesh.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
+
+
+
+                _scene.Add(wallGO);
+            }
+
+
         }
         private void ReplaceChestModel(ChestController controller)
         {
