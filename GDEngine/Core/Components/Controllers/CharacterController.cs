@@ -37,7 +37,9 @@ namespace GDEngine.Core.Components.Controllers
         #region Properties
         //Value to track who is being interacted with
         public string CharID { get; set; } = "";
+        public bool hasSpoken { get; set; } = false;
 
+        public bool gameWon { get; set; }
         //Range for interaction
         public float Range { get; set; } = 5.0f;
         //Reference to the scene
@@ -117,7 +119,7 @@ namespace GDEngine.Core.Components.Controllers
             {
                 //Debug
                 System.Diagnostics.Debug.WriteLine("Spoken to Celeste");
-
+                hasSpoken = true;
                 //If this is the first time speaking to the character
                 if (timesSpoken == 0)
                 {
@@ -158,18 +160,21 @@ namespace GDEngine.Core.Components.Controllers
             {
                 //Debug
                 System.Diagnostics.Debug.WriteLine("Spoken to Khaslana");
-
+                hasSpoken = true;
 
                 if (timesSpoken == 0)
                 {
                     System.Diagnostics.Debug.WriteLine("Talked to Khaslana for the " + timesSpoken + " time");
                     dialogue.Add(new DialogueLine("Khaslana", "Elysia? Is that you? "));
                     dialogue.Add(new DialogueLine("Khaslana", "I can't believe you found me"));
+                    dialogue.Add(new DialogueLine("Khaslana", "Take my hand!"));
+
                 }
                 else if (timesSpoken % 2 == 0)
                 {
                     System.Diagnostics.Debug.WriteLine("Talked to Khaslana for the " + timesSpoken + " time");
-                    dialogue.Add(new DialogueLine("Khaslana", "Let's get out of here!"));
+                    //dialogue.Add(new DialogueLine("Khaslana", "Let's get out of here!"));
+                    gameWon = true;
 
                 }
                 else

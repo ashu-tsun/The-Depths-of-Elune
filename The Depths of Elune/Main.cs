@@ -77,6 +77,9 @@ namespace The_Depths_of_Elune
         private DialogueBox _dialogueBox;
         private DialogueManager _dialogueManager;
         private GameObject playerParent;
+        private CharacterController celesteController;
+        private CharacterController khaslanaController;
+        private ChestController mimicController;
         #endregion
 
         #region Core Methods (Common to all games)     
@@ -752,6 +755,9 @@ namespace The_Depths_of_Elune
             #endregion
 
             DemoStuff();
+            checkDialogue();
+            checkGameState();
+
 
             base.Update(gameTime);
         }
@@ -1045,7 +1051,7 @@ namespace The_Depths_of_Elune
             celeste = InitializeModel(new Vector3(16, -0.5f, -15), new Vector3(-90, -180, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", "celeste");
 
 
-            var celesteController = celeste.AddComponent<CharacterController>();
+            celesteController = celeste.AddComponent<CharacterController>();
             celesteController.Scene = _scene;
             celesteController.CharID = "celeste";
             celesteController.DialogueManager = _dialogueManager;
@@ -1056,14 +1062,13 @@ namespace The_Depths_of_Elune
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("celeste_texture");
             _scene.Add(celeste);
-
             //Khaslana
             GameObject khaslana = new GameObject("khaslana");
 
             // A unit quad facing +Z (the factory already supplies lit quad with UVs)
             khaslana = InitializeModel(new Vector3(0, 3f, -60), new Vector3(-90, 0, 0), new Vector3(1, 0.8f, 2), "khaslana_texture", "khaslana", "khaslana");
 
-            var khaslanaController = khaslana.AddComponent<CharacterController>();
+            khaslanaController = khaslana.AddComponent<CharacterController>();
             khaslanaController.Scene = _scene;
             khaslanaController.CharID = "khaslana";
             khaslanaController.DialogueManager = _dialogueManager;
@@ -1149,10 +1154,13 @@ namespace The_Depths_of_Elune
                 {
                     //calls the method to replace the model
                     ReplaceChestModel(chestController);
+                    
 
                 }
 
                 _scene.Add(chestGO);
+                //temp to initialize
+                mimicController = chestController;
 
             }
 
@@ -1259,9 +1267,9 @@ namespace The_Depths_of_Elune
         }
         private void ReplaceChestModel(ChestController controller)
         {
+            mimicController = controller;
             //removing the chest from the scene for replacement
             _scene.Remove(controller.GameObject);
-
             //building the new chest with same pos/rot/scale and ID but change model based on if its normal or mimic
             if (controller.IsReal)
             {
@@ -1276,13 +1284,12 @@ namespace The_Depths_of_Elune
             else
             {
                 var events = EngineContext.Instance.Events;
-               // events.Publish(new PlaySfxEvent("Bad Ending",1, false, null));
+                events.Publish(new PlaySfxEvent("celeste_sound",1, false, null));
                 var newChest = InitializeModel(controller.OriginalPosition, controller.OriginalRotation, controller.OriginalScale, "chest_texture", "Mimic", controller.ChestID);
                
                 // give it renderer
                 var renderer = newChest.AddComponent<MeshRenderer>();
                 renderer.Material = _char;
-
                 _scene.Add(newChest);
             }
 
@@ -1353,5 +1360,37 @@ namespace The_Depths_of_Elune
             rigidBody.BodyType = BodyType.Dynamic;
             rigidBody.Mass = 1.0f;
         }
+
+        private void checkDialogue()
+        {
+            var events = EngineContext.Instance.Events;
+            if (celesteController.hasSpoken)
+            {
+                //Play her dialogue sound
+                events.Publish(new PlaySfxEvent("celeste_sound", 1, false, null));
+                celesteController.hasSpoken = false;
+            }
+            if (khaslanaController.hasSpoken)
+            {
+                events.Publish(new PlaySfxEvent("celeste_sound", 1, false, null));
+                khaslanaController.hasSpoken = false;
+            }
+        }
+
+        private void checkGameState()
+        {
+            if (khaslanaController.gameWon)
+            {
+                System.Diagnostics.Debug.WriteLine("You won");
+                khaslanaController.gameWon = false;
+            }
+
+            if(mimicController.gameLost)
+            {
+                System.Diagnostics.Debug.WriteLine("You lost");
+                mimicController.gameLost = false;
+            }
+        }
+        
     }    
 }

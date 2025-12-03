@@ -252,6 +252,10 @@
             "contentPath": "assets/sounds/Bad Ending"
         },
         {
+            "name": "celeste_sound",
+            "contentPath": "assets/sounds/celeste_sound"
+        },
+        {
             "name": "SFX_UI_Click_Designed_Pop_Negative_Close_1",
             "contentPath": "assets/sounds/ui/SFX_UI_Click_Designed_Pop_Negative_Close_1"
         }

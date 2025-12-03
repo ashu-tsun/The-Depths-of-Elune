@@ -144,25 +144,6 @@
 /processorParam:TextureFormat=Compressed
 /build:Assets/Models/CeilingRooms.fbx;Assets/Models/CeilingRooms
 
-#begin Assets/Models/CeilingRooms.fbx
-/importer:FbxImporter
-/processor:ModelProcessor
-/processorParam:ColorKeyColor=0,0,0,0
-/processorParam:ColorKeyEnabled=True
-/processorParam:DefaultEffect=BasicEffect
-/processorParam:GenerateMipmaps=True
-/processorParam:GenerateTangentFrames=False
-/processorParam:PremultiplyTextureAlpha=True
-/processorParam:PremultiplyVertexColors=True
-/processorParam:ResizeTexturesToPowerOfTwo=False
-/processorParam:RotationX=0
-/processorParam:RotationY=0
-/processorParam:RotationZ=0
-/processorParam:Scale=1
-/processorParam:SwapWindingOrder=False
-/processorParam:TextureFormat=Compressed
-/build:Assets/Models/CeilingRooms.fbx;Assets/Models/CeilingRooms
-
 #begin Assets/Models/celeste.fbx
 /importer:FbxImporter
 /processor:ModelProcessor
@@ -643,6 +624,12 @@
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Assets/Sounds/Bad Ending.wav;Assets/Sounds/Bad Ending
+
+#begin Assets/Sounds/celeste_sound.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Assets/Sounds/celeste_sound.wav;Assets/Sounds/celeste_sound
 
 #begin Assets/Sounds/Explosion 1.wav
 /importer:WavImporter

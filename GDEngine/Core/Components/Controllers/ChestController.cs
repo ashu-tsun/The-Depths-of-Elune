@@ -50,6 +50,8 @@ namespace GDEngine.Core.Components.Controllers
         //to check chest if it just opened
         public bool HasJustOpened { get; set; } = false;
 
+        public bool gameLost { get; set; } = false;
+
         //temp boolean hardcoding to be able to unlock door.
         public static bool RecievedSigil = false;
 
@@ -137,7 +139,7 @@ namespace GDEngine.Core.Components.Controllers
             {
                 TriggerDeath();
                 //test REMOVE LATER
-                System.Diagnostics.Debug.WriteLine("MIMIC YOU DIE");
+                //System.Diagnostics.Debug.WriteLine("MIMIC YOU DIE");
             }
 
             ChangeToOpenedModel();
@@ -158,6 +160,8 @@ namespace GDEngine.Core.Components.Controllers
         private void TriggerDeath()
         {
             // TODO: death
+            gameLost = true;
+            System.Diagnostics.Debug.WriteLine("ahhhh");
         }
 
         private void ChangeToOpenedModel()
