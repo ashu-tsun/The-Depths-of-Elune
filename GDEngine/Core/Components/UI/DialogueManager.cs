@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using GDEngine.Core.Components;
 using Microsoft.Xna.Framework.Input;
-using The_Depths_of_Elune.UI;
+
 namespace The_Depths_of_Elune.UI
 {
     //Manages how dialogue occurs, progresses and ends
@@ -76,6 +76,7 @@ namespace The_Depths_of_Elune.UI
                 return;
             }
 
+            System.Diagnostics.Debug.WriteLine("Dialogue Started");
             //Make sure there is no dialogue currently being displayed
             _currentDialogue.Clear();
 

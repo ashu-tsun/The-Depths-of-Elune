@@ -90,6 +90,8 @@ namespace The_Depths_of_Elune.UI
         #region Draw
         public override void Draw(GraphicsDevice device, Camera camera)
         {
+
+            //System.Diagnostics.Debug.WriteLine("Drawing Dialogue");
             if (!_isVisible)
             {
                 return;

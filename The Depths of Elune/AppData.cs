@@ -112,5 +112,10 @@ namespace The_Depths_of_Elune
 
 
         #endregion
+
+
+        #region Level
+        public static readonly string LEVEL_1_NAME = "outdoors - level 1";
+        #endregion
     }
 }

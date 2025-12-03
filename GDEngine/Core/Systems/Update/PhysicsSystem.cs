@@ -1,18 +1,19 @@
-﻿using BepuPhysics;
+﻿using System.Runtime.CompilerServices;
+using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
 using GDEngine.Core.Components;
 using GDEngine.Core.Entities;
 using GDEngine.Core.Enums;
 using GDEngine.Core.Events;
-using GDEngine.Core.Systems.Base;
+using GDEngine.Core.Rendering.Base;
 using GDEngine.Core.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Runtime.CompilerServices;
 using MathHelper = Microsoft.Xna.Framework.MathHelper;
 using Matrix = Microsoft.Xna.Framework.Matrix;
 
@@ -23,11 +24,12 @@ namespace GDEngine.Core.Systems
     /// Handles simulation stepping, body registration, syncing Transforms,
     /// collision callbacks, gravity, and runtime body-type switching.
     /// </summary>
-    public sealed class PhysicsSystem : SystemBase, IDisposable
+    public sealed class PhysicsSystem : PausableSystemBase, IDisposable
     {
         #region Fields
 
-        private Simulation _simulation = null!;
+        public Simulation _simulation = null!;
+
         private BufferPool _bufferPool = null!;
         private ThreadDispatcher _threadDispatcher = null!;
 
@@ -35,12 +37,19 @@ namespace GDEngine.Core.Systems
         private readonly List<RigidBody> _kinematicBodies = new List<RigidBody>(64);
         private readonly List<RigidBody> _staticBodies = new List<RigidBody>(512);
 
-        private readonly Dictionary<BodyHandle, RigidBody> _handleToComponent =
+        internal readonly Dictionary<BodyHandle, RigidBody> _handleToComponent =
             new Dictionary<BodyHandle, RigidBody>(512);
+
+        // Map statics back to RigidBody for raycasts / triggers.
+        internal readonly Dictionary<StaticHandle, RigidBody> _staticHandleToComponent =
+            new Dictionary<StaticHandle, RigidBody>(512);
+
+        // Remember the last physics step dt so bodies don’t depend on render dt.
+        private float _lastStepDt = 0f;
 
         private Vector3 _gravity = new Vector3(0, -9.81f, 0);
 
-        private int _velocityIterations = 12;
+        private int _velocityIterations = 8;
         private int _substepCount = 1;
 
         private float _fixedTimestep = -1f; // -1 = variable timestep
@@ -62,6 +71,13 @@ namespace GDEngine.Core.Systems
             set => _gravity = value;
         }
 
+        /// <summary>
+        /// The timestep (in seconds) used in the most recent physics step.
+        /// </summary>
+        public float LastStepDt
+        {
+            get => _lastStepDt;
+        }
 
         public int VelocityIterations
         {
@@ -88,9 +104,11 @@ namespace GDEngine.Core.Systems
 
         #region Constructor
 
-        public PhysicsSystem(int order = -50)
+        public PhysicsSystem(int order = 1000)
             : base(FrameLifecycle.LateUpdate, order)
         {
+            // Physics should not step when the game is paused.
+            PauseMode = PauseMode.Update;
         }
 
         #endregion
@@ -166,7 +184,9 @@ namespace GDEngine.Core.Systems
 
         internal StaticHandle AddStaticToSimulation(RigidBody rb, StaticDescription desc)
         {
-            return _simulation.Statics.Add(desc);
+            var handle = _simulation.Statics.Add(desc);
+            _staticHandleToComponent[handle] = rb;
+            return handle;
         }
 
         internal void RemoveBodyFromSimulation(BodyHandle handle)
@@ -182,6 +202,8 @@ namespace GDEngine.Core.Systems
         {
             if (_simulation.Statics.StaticExists(handle))
                 _simulation.Statics.Remove(handle);
+
+            _staticHandleToComponent.Remove(handle);
         }
 
         #endregion
@@ -206,14 +228,24 @@ namespace GDEngine.Core.Systems
             );
         }
 
-
-        public override void Update(float dt)
+        protected override void OnUpdate(float dt)
         {
             if (!Enabled)
                 return;
 
             if (dt <= 0f)
                 return;
+
+            // CRITICAL FIX: Force all transforms to recalculate BEFORE physics step
+            // This ensures physics sees the latest transform state
+            if (Scene != null)
+            {
+                foreach (var go in Scene.GameObjects)
+                {
+                    if (go.Enabled && go.Transform != null)
+                        _ = go.Transform.WorldMatrix;
+                }
+            }
 
             if (_fixedTimestep > 0f)
             {
@@ -231,6 +263,44 @@ namespace GDEngine.Core.Systems
             }
         }
 
+        //public override void Update(float dt)
+        //{
+        //    if (!Enabled)
+        //        return;
+
+        //    if (dt <= 0f)
+        //        return;
+
+        //    // CRITICAL FIX: Force all transforms to recalculate BEFORE physics step
+        //    // This ensures physics sees the latest transform state
+        //    if (Scene != null)
+        //    {
+        //        foreach (var go in Scene.GameObjects)
+        //        {
+        //            if (go.Enabled && go.Transform != null)
+        //            {
+        //                // Simply accessing WorldMatrix triggers recalculation if dirty
+        //                _ = go.Transform.WorldMatrix;
+        //            }
+        //        }
+        //    }
+
+        //    if (_fixedTimestep > 0f)
+        //    {
+        //        _accumulator += dt;
+
+        //        while (_accumulator >= _fixedTimestep)
+        //        {
+        //            Step(_fixedTimestep);
+        //            _accumulator -= _fixedTimestep;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        Step(dt);
+        //    }
+        //}
+
 
         protected override void OnRemoved()
         {
@@ -242,20 +312,36 @@ namespace GDEngine.Core.Systems
 
         #region Simulation Step
 
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //private void Step(float dt)
+        //{
+        //    // 1. Sync TRANSFORM → PHYSICS for kinematics
+        //    SyncKinematics();
+
+        //    // 2. Run substeps
+        //    float sdt = dt / _substepCount;
+        //    for (int i = 0; i < _substepCount; i++)
+        //        _simulation.Timestep(sdt, _threadDispatcher);
+
+        //    // 3. Sync PHYSICS → TRANSFORM for dynamics
+        //    SyncDynamics();
+        //}
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Step(float dt)
         {
+            _lastStepDt = dt;
+
             // 1. Sync TRANSFORM → PHYSICS for kinematics
             SyncKinematics();
 
-            // 2. Run substeps
-            float sdt = dt / _substepCount;
-            for (int i = 0; i < _substepCount; i++)
-                _simulation.Timestep(sdt, _threadDispatcher);
+            // 2. Step the simulation
+            _simulation.Timestep(dt, _threadDispatcher);
 
             // 3. Sync PHYSICS → TRANSFORM for dynamics
             SyncDynamics();
         }
+
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -281,16 +367,76 @@ namespace GDEngine.Core.Systems
         #endregion
 
 
-        #region Raycast Stub
+        #region Raycast
 
-        // Leaving as a stub for now (Bepu v2 raycast example available if needed)
+        /// <summary>
+        /// Convenience overload that raycasts without including trigger colliders
+        /// and without any explicit layer filtering.
+        /// </summary>
         public bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, out RaycastHit hit)
         {
+            // No layer filter => LayerMask.All
+            return Raycast(origin, direction, maxDistance, LayerMask.All, out hit, false);
+        }
+
+        /// <summary>
+        /// Convenience overload that raycasts with a layer filter but ignores triggers.
+        /// </summary>
+        public bool Raycast(
+            Vector3 origin,
+            Vector3 direction,
+            float maxDistance,
+            LayerMask layerMask,
+            out RaycastHit hit)
+        {
+            return Raycast(origin, direction, maxDistance, layerMask, out hit, false);
+        }
+
+        /// <summary>
+        /// Casts a ray through the physics simulation and returns the first hit.
+        /// </summary>
+        /// <param name="origin">World space origin of the ray.</param>
+        /// <param name="direction">World space direction (need not be normalized).</param>
+        /// <param name="maxDistance">Maximum distance to check.</param>
+        /// <param name="layerMask">Layer mask to filter potential hits.</param>
+        /// <param name="hit">Output hit information.</param>
+        /// <param name="hitTriggers">If false, trigger colliders are ignored.</param>
+        public bool Raycast(
+            Vector3 origin,
+            Vector3 direction,
+            float maxDistance,
+            LayerMask layerMask,
+            out RaycastHit hit,
+            bool hitTriggers = false)
+        {
             hit = default;
+
+            if (_simulation == null)
+                return false;
+
+            if (direction.LengthSquared() <= float.Epsilon)
+                return false;
+
+            direction.Normalize();
+
+            var rayOrigin = origin.ToBepu();
+            var rayDirection = direction.ToBepu();
+
+            var handler = new RayHitHandler(this, hitTriggers, layerMask);
+
+            _simulation.RayCast(rayOrigin, rayDirection, maxDistance, ref handler);
+
+            if (handler.ClosestHit.HasValue)
+            {
+                hit = handler.ClosestHit.Value;
+                return true;
+            }
+
             return false;
         }
 
         #endregion
+
 
 
         #region Disposal
@@ -310,13 +456,70 @@ namespace GDEngine.Core.Systems
             _bufferPool?.Clear();
 
             _disposed = true;
-            System.Diagnostics.Debug.WriteLine("[PhysicsSystem] Disposed.");
         }
 
         #endregion
 
 
         #region NarrowPhase & PoseIntegrator Structs
+
+        //private struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
+        //{
+        //    private PhysicsSystem _system;
+
+        //    public NarrowPhaseCallbacks(PhysicsSystem sys)
+        //    {
+        //        _system = sys;
+        //    }
+
+        //    public void Initialize(Simulation simulation) { }
+
+        //    public bool AllowContactGeneration(
+        //        int workerIndex,
+        //        CollidableReference a,
+        //        CollidableReference b,
+        //        ref float speculativeMargin)
+        //    {
+        //        speculativeMargin = 0.1f;
+        //        return true;
+        //    }
+
+        //    public bool AllowContactGeneration(
+        //        int workerIndex,
+        //        CollidablePair pair,
+        //        int childA,
+        //        int childB) => true;
+
+        //    public bool ConfigureContactManifold<TManifold>(
+        //        int workerIndex,
+        //        CollidablePair pair,
+        //        ref TManifold manifold,
+        //        out PairMaterialProperties props)
+        //        where TManifold : unmanaged, IContactManifold<TManifold>
+        //    {
+        //        props = new PairMaterialProperties
+        //        {
+        //            FrictionCoefficient = 0.5f,
+        //            MaximumRecoveryVelocity = 2f,
+        //            SpringSettings = new SpringSettings(240, 1)
+        //        };
+        //        return true;
+        //    }
+
+        //    public bool ConfigureContactManifold(
+        //        int workerIndex,
+        //        CollidablePair pair,
+        //        int childA,
+        //        int childB,
+        //        ref ConvexContactManifold manifold)
+        //    {
+        //        // This is for compound/mesh contacts with children
+        //        // Still need to return true to allow the contact
+        //        return true;
+        //    }
+
+        //    public void Dispose() { }
+        //}
 
         private struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
         {
@@ -335,7 +538,8 @@ namespace GDEngine.Core.Systems
                 CollidableReference b,
                 ref float speculativeMargin)
             {
-                speculativeMargin = 0.05f;
+                // DIAGNOSTIC: Log when contacts are attempted
+                Console.WriteLine($"[Physics] Contact attempted between {a.Mobility} and {b.Mobility}");
                 return true;
             }
 
@@ -343,7 +547,28 @@ namespace GDEngine.Core.Systems
                 int workerIndex,
                 CollidablePair pair,
                 int childA,
-                int childB) => true;
+                int childB)
+            {
+                return true;
+            }
+
+            //public bool ConfigureContactManifold<TManifold>(
+            //    int workerIndex,
+            //    CollidablePair pair,
+            //    ref TManifold manifold,
+            //    out PairMaterialProperties props)
+            //    where TManifold : unmanaged, IContactManifold<TManifold>
+            //{
+
+            //    props = new PairMaterialProperties
+            //    {
+            //        FrictionCoefficient = 0.5f,
+            //        MaximumRecoveryVelocity = 2f,
+            //        SpringSettings = new SpringSettings(30, 1)  // Use stiff springs
+            //    };
+
+            //    return true;
+            //}
 
             public bool ConfigureContactManifold<TManifold>(
                 int workerIndex,
@@ -352,14 +577,71 @@ namespace GDEngine.Core.Systems
                 out PairMaterialProperties props)
                 where TManifold : unmanaged, IContactManifold<TManifold>
             {
+                // Default material settings
                 props = new PairMaterialProperties
                 {
                     FrictionCoefficient = 0.5f,
-                    MaximumRecoveryVelocity = 10f,
-                    SpringSettings = new SpringSettings(120, 1)
+                    MaximumRecoveryVelocity = 2f,
+                    SpringSettings = new SpringSettings(30, 1)
                 };
+
+                // Look up RigidBody instances for both collidables (static or dynamic/kinematic).
+                RigidBody? rbA = null;
+                RigidBody? rbB = null;
+
+                var a = pair.A;
+                var b = pair.B;
+
+                if (a.Mobility == CollidableMobility.Static)
+                    _system._staticHandleToComponent.TryGetValue(a.StaticHandle, out rbA);
+                else
+                    _system._handleToComponent.TryGetValue(a.BodyHandle, out rbA);
+
+                if (b.Mobility == CollidableMobility.Static)
+                    _system._staticHandleToComponent.TryGetValue(b.StaticHandle, out rbB);
+                else
+                    _system._handleToComponent.TryGetValue(b.BodyHandle, out rbB);
+
+                if (rbA == null || rbB == null)
+                    return true;
+
+                var colliderA = rbA.GameObject?.GetComponent<Collider>();
+                var colliderB = rbB.GameObject?.GetComponent<Collider>();
+
+                bool aIsTrigger = colliderA?.IsTrigger == true;
+                bool bIsTrigger = colliderB?.IsTrigger == true;
+                bool isTriggerPair = aIsTrigger || bIsTrigger;
+
+                // Publish via EventBus (if available)
+                var scene = _system.Scene;
+                var context = scene?.Context;
+                var bus = context?.Events;
+
+                if (bus != null)
+                {
+                    if (isTriggerPair)
+                    {
+                        var trigger = aIsTrigger ? rbA : rbB;
+                        var other = trigger == rbA ? rbB! : rbA!;
+                        bus.Post(new TriggerEvent(trigger!, other));
+                    }
+                    else
+                    {
+                        bus.Post(new CollisionEvent(rbA, rbB));
+                    }
+                }
+
+                // For trigger pairs, disable physical response by zeroing material.
+                if (isTriggerPair)
+                {
+                    props.FrictionCoefficient = 0f;
+                    props.MaximumRecoveryVelocity = 0f;
+                    props.SpringSettings = new SpringSettings(0f, 1f);
+                }
+
                 return true;
             }
+
 
             public bool ConfigureContactManifold(
                 int workerIndex,
@@ -411,10 +693,201 @@ namespace GDEngine.Core.Systems
             }
         }
 
+        /// <summary>
+        /// Casts a ray from the camera through a screen position.
+        /// </summary>
+        public bool RaycastFromScreen(
+            Camera camera,
+            float screenX,
+            float screenY,
+            float maxDistance,
+            out RaycastHit hit,
+            bool hitTriggers = false)
+        {
+            return RaycastFromScreen(camera, screenX, screenY, maxDistance, LayerMask.All, out hit, hitTriggers);
+        }
+
+        /// <summary>
+        /// Casts a ray from the camera through a screen position, filtered by layer mask.
+        /// </summary>
+        public bool RaycastFromScreen(
+            Camera camera,
+            float screenX,
+            float screenY,
+            float maxDistance,
+            LayerMask layerMask,
+            out RaycastHit hit,
+            bool hitTriggers = false)
+        {
+            hit = default;
+
+            if (camera == null || Scene == null || Scene.Context == null)
+                return false;
+
+            var viewport = Scene.Context.GraphicsDevice.Viewport;
+
+            // Unproject screen position to world-space near/far points
+            var nearWorld = viewport.Unproject(
+                new Vector3(screenX, screenY, 0f),
+                camera.Projection,
+                camera.View,
+                Matrix.Identity);
+
+            var farWorld = viewport.Unproject(
+                new Vector3(screenX, screenY, 1f),
+                camera.Projection,
+                camera.View,
+                Matrix.Identity);
+
+            var origin = nearWorld;
+            var direction = farWorld - nearWorld;
+
+            if (direction.LengthSquared() <= float.Epsilon)
+                return false;
+
+            direction.Normalize();
+
+            return Raycast(origin, direction, maxDistance, layerMask, out hit, hitTriggers);
+        }
+
+        /// <summary>
+        /// Casts a ray from the camera through the current mouse cursor position.
+        /// </summary>
+        public bool RaycastFromMouse(
+            Camera camera,
+            Microsoft.Xna.Framework.Input.MouseState mouseState,
+            float maxDistance,
+            out RaycastHit hit,
+            bool hitTriggers = false)
+        {
+            return RaycastFromScreen(camera, mouseState.X, mouseState.Y, maxDistance, LayerMask.All, out hit, hitTriggers);
+        }
+
+        /// <summary>
+        /// Casts a ray from the camera through the current mouse cursor position, filtered by layer mask.
+        /// </summary>
+        public bool RaycastFromMouse(
+            Camera camera,
+            Microsoft.Xna.Framework.Input.MouseState mouseState,
+            float maxDistance,
+            LayerMask layerMask,
+            out RaycastHit hit,
+            bool hitTriggers = false)
+        {
+            return RaycastFromScreen(camera, mouseState.X, mouseState.Y, maxDistance, layerMask, out hit, hitTriggers);
+        }
+
+        internal bool RaycastFromScreen(Camera camera, float x, float y, object maxDistance, object hitMask, out RaycastHit hitInfo, object hitTriggers)
+        {
+            throw new NotImplementedException();
+        }
 
         #endregion
     }
 
+
+    #region Raycast Support
+
+    /// <summary>
+    /// Ray hit handler for BepuPhysics v2 raycasts.
+    /// Handles trigger filtering and LayerMask filtering.
+    /// </summary>
+    public struct RayHitHandler : IRayHitHandler
+    {
+        public RaycastHit? ClosestHit;
+        public float ClosestT;
+
+        private readonly PhysicsSystem _system;
+        private readonly bool _hitTriggers;
+        private readonly LayerMask _layerMask;
+
+        public RayHitHandler(PhysicsSystem system, bool hitTriggers, LayerMask layerMask)
+        {
+            _system = system;
+            _hitTriggers = hitTriggers;
+            _layerMask = layerMask;
+
+            ClosestHit = null;
+            ClosestT = float.MaxValue;
+        }
+
+        public bool AllowTest(CollidableReference collidable)
+        {
+            return AllowTest(collidable, 0);
+        }
+
+        public bool AllowTest(CollidableReference collidable, int childIndex)
+        {
+            // Look up RigidBody (if any) for trigger and layer filtering.
+            RigidBody? rb = null;
+
+            if (collidable.Mobility == CollidableMobility.Static)
+            {
+                _system._staticHandleToComponent.TryGetValue(collidable.StaticHandle, out rb);
+            }
+            else
+            {
+                _system._handleToComponent.TryGetValue(collidable.BodyHandle, out rb);
+            }
+
+            if (rb != null)
+            {
+                var go = rb.GameObject;
+                var collider = go?.GetComponent<Collider>();
+
+                // Trigger filter
+                if (collider != null && collider.IsTrigger && !_hitTriggers)
+                    return false;
+
+                // Layer filter: if a specific mask is given, skip bodies whose
+                // layer does not intersect with it.
+                if (_layerMask != LayerMask.All && go != null)
+                {
+                    if ((go.Layer & _layerMask) == 0)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void OnRayHit(
+            in RayData ray,
+            ref float maximumT,
+            float t,
+            in System.Numerics.Vector3 normal,
+            CollidableReference collidable,
+            int childIndex)
+        {
+            if (t >= maximumT)
+                return;
+
+            // Compute hit point in world space
+            var hitPoint = ray.Origin + ray.Direction * t;
+
+            RigidBody? rb = null;
+            if (collidable.Mobility == CollidableMobility.Static)
+            {
+                _system._staticHandleToComponent.TryGetValue(collidable.StaticHandle, out rb);
+            }
+            else
+            {
+                _system._handleToComponent.TryGetValue(collidable.BodyHandle, out rb);
+            }
+
+            var hit = new RaycastHit
+            {
+                Body = rb,
+                Point = hitPoint.ToXNA(),
+                Normal = normal.ToXNA(),
+                Distance = t
+            };
+
+            ClosestHit = hit;
+            ClosestT = t;
+            maximumT = t;
+        }
+    }
 
     /// <summary>
     /// Result of a raycast query.
@@ -425,7 +898,16 @@ namespace GDEngine.Core.Systems
         public Vector3 Point;
         public Vector3 Normal;
         public float Distance;
+
+        public override string ToString()
+        {
+            var bodyName = Body?.GameObject?.Name ?? "null";
+            return $"RaycastHit(Body={bodyName}, Point={Point}, Distance={Distance:F2})";
+        }
     }
+
+    #endregion
+
     /// <summary>
     /// Renders wireframe debug visualization for physics colliders in PostRender.
     /// Shows boxes, spheres, and capsules as colored wireframes to help debug physics issues.
@@ -437,7 +919,7 @@ namespace GDEngine.Core.Systems
     /// - Yellow: Dynamic bodies (physics-driven)
     /// - Red: Triggers (no collision response)
     /// </remarks>
-    public sealed class PhysicsDebugRenderer : SystemBase
+    public sealed class PhysicsDebugSystem : PausableSystemBase
     {
         #region Fields
         private Scene _scene = null!;
@@ -504,9 +986,12 @@ namespace GDEngine.Core.Systems
         /// <summary>
         /// Creates a PhysicsDebugRenderer in PostRender lifecycle.
         /// </summary>
-        public PhysicsDebugRenderer(int order = 100)
+        public PhysicsDebugSystem(int order = 100)
             : base(FrameLifecycle.PostRender, order)
         {
+            // Physics should not step when the game is paused.
+            PauseMode = PauseMode.Update;
+
         }
         #endregion
 
@@ -531,7 +1016,7 @@ namespace GDEngine.Core.Systems
             InitializeSphereWireframe();
         }
 
-        public override void Draw(float deltaTime)
+        protected override void OnDraw(float deltaTime)
         {
             if (!_enabled)
                 return;
@@ -626,8 +1111,6 @@ namespace GDEngine.Core.Systems
                 );
             }
         }
-
-
 
         private void DrawSphereCollider(Transform transform, SphereCollider sphere, Color color)
         {

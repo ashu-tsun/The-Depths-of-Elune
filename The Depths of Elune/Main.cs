@@ -1,28 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection.Metadata;
 using GDEngine.Core;
 using GDEngine.Core.Audio;
-using GDEngine.Core.Audio.Events;
 using GDEngine.Core.Collections;
 using GDEngine.Core.Components;
 using GDEngine.Core.Components.Controllers;
 using GDEngine.Core.Debug;
 using GDEngine.Core.Entities;
 using GDEngine.Core.Events;
-using GDEngine.Core.Events.Types.Camera;
 using GDEngine.Core.Extensions;
 using GDEngine.Core.Factories;
+using GDEngine.Core.Gameplay;
+using GDEngine.Core.Impulses;
 using GDEngine.Core.Input.Data;
 using GDEngine.Core.Input.Devices;
 using GDEngine.Core.Managers;
 using GDEngine.Core.Orchestration;
 using GDEngine.Core.Rendering;
+using GDEngine.Core.Rendering.Base;
 using GDEngine.Core.Rendering.UI;
+using GDEngine.Core.Screen;
 using GDEngine.Core.Serialization;
 using GDEngine.Core.Services;
 using GDEngine.Core.Systems;
-using GDEngine.Core.Systems.Base;
 using GDEngine.Core.Timing;
 using GDEngine.Core.Utilities;
 using GDGame.Demos.Controllers;
@@ -67,7 +67,7 @@ namespace The_Depths_of_Elune
         private AnimationCurve3D _animationPositionCurve, _animationRotationCurve;
         private AnimationCurve _animationCurve;
         private GameObject _cameraGO;
-        private UIStatsRenderer _uiStatsRenderer;
+        private SceneManager _sceneManager;
         private int _dummyHealth;
         private KeyboardState _newKBState, _oldKBState;
         private int _damageAmount;
@@ -113,6 +113,7 @@ namespace The_Depths_of_Elune
             // All effects used in game
             InitializeEffects();
 
+            InitializeSceneManager();
             // Scene to hold game objects
             InitializeScene();
 
@@ -125,8 +126,9 @@ namespace The_Depths_of_Elune
             // All cameras we want in the game are loaded now and one set as active
             InitializeCameras();
 
+            InitializeCameraManagers();
             //game manager, camera changer, FSM, AI
-            InitializeManagers();
+            //InitializeManagers();
 
             // Setup world
             int scale = 300;
@@ -138,6 +140,9 @@ namespace The_Depths_of_Elune
             #region Demos
             DemoPlaySoundEffect();
             InitializeUI();
+
+            // Set the active scene
+            _sceneManager.SetActiveScene(AppData.LEVEL_1_NAME);
 
             // Camera-demos
             InitializeAnimationCurves();
@@ -167,12 +172,20 @@ namespace The_Depths_of_Elune
             base.Initialize();
         }
 
-        private void InitializeManagers()
+        private void InitializeSceneManager()
         {
-            var go = new GameObject("Camera Manager");
-            go.AddComponent<CameraChangeEventListener>();
-            _scene.Add(go);
+            _sceneManager = new SceneManager(this);
+            Components.Add(_sceneManager);
         }
+
+        private void InitializeCameraManagers()
+        {
+            //inside scene
+            var go = new GameObject("Camera Manager");
+            go.AddComponent<CameraEventListener>();
+            _sceneManager.ActiveScene.Add(go);
+        }
+
 
         private void DemoPlaySoundEffect()
         {
@@ -203,7 +216,7 @@ namespace The_Depths_of_Elune
             playerRb.BodyType = BodyType.Kinematic; playerRb.Mass = 1f; 
 
             playerModel.Transform.SetParent(playerParent); 
-            _scene.Add(playerParent);
+            _sceneManager.ActiveScene.Add(playerParent);
         }
 
 
@@ -359,7 +372,13 @@ namespace The_Depths_of_Elune
         private void InitializeScene()
         {
             // Make a scene that will store all drawn objects and systems for that level
-            _scene = new Scene(EngineContext.Instance, "Main Level");
+            var scene = new Scene(EngineContext.Instance, "outdoors - level 1");
+
+            // Add each new scene into the manager
+            _sceneManager.AddScene(AppData.LEVEL_1_NAME, scene);
+
+            // Set the active scene before anything that uses ActiveScene
+            _sceneManager.SetActiveScene(AppData.LEVEL_1_NAME);
         }
 
         private void InitializeSystems()
@@ -371,6 +390,19 @@ namespace The_Depths_of_Elune
             InitializeCameraAndRenderSystems(); //update cameras, draw renderable game objects, draw ui and menu
             InitializeAudioSystem();
             InitializeOrchestrationSystem();
+            InitializeGameStateSystem();
+            InitializeUIEventSystem();
+        }
+
+        private void InitializeGameStateSystem()
+        {
+            // Add game state system
+            _sceneManager.ActiveScene.AddSystem(new GameStateSystem());
+        }
+
+        private void InitializeUIEventSystem()
+        {
+            _sceneManager.ActiveScene.AddSystem(new UIEventSystem());
         }
 
         private void InitializeOrchestrationSystem()
@@ -382,18 +414,18 @@ namespace The_Depths_of_Elune
                 options.LocalScale = 1;
                 options.Paused = false;
             });
-            _scene.Add(orchestrationSystem);
+            _sceneManager.ActiveScene.Add(orchestrationSystem);
 
         }
 
         private void InitializeAudioSystem()
         {
-            _scene.Add(new AudioSystem(_soundDictionary));
+            _sceneManager.ActiveScene.Add(new AudioSystem(_soundDictionary));
         }
 
         private void InitializePhysicsDebugSystem(bool isEnabled)
         {
-            var physicsDebugRenderer = _scene.AddSystem(new PhysicsDebugRenderer());
+            var physicsDebugRenderer = _sceneManager.ActiveScene.AddSystem(new PhysicsDebugSystem());
 
             // Toggle debug rendering on/off
             physicsDebugRenderer.Enabled = isEnabled; // or false to hide
@@ -409,25 +441,28 @@ namespace The_Depths_of_Elune
         private void InitializePhysicsSystem()
         {
             // 1. add physics
-            var physicsSystem = _scene.AddSystem(new PhysicsSystem());
+            var physicsSystem = _sceneManager.ActiveScene.AddSystem(new PhysicsSystem());
             physicsSystem.Gravity = AppData.GRAVITY;
         }
 
         private void InitializeEventSystem()
         {
-            _scene.Add(new EventSystem(EngineContext.Instance.Events));
+            _sceneManager.ActiveScene.Add(new EventSystem(EngineContext.Instance.Events));
         }
 
         private void InitializeCameraAndRenderSystems()
         {
+            //manages camera
             var cameraSystem = new CameraSystem(_graphics.GraphicsDevice, -100);
-            _scene.Add(cameraSystem);
+            _sceneManager.ActiveScene.Add(cameraSystem);
 
+            //3d
             var renderSystem = new RenderSystem(-100);
-            _scene.Add(renderSystem);
+            _sceneManager.ActiveScene.Add(renderSystem);
 
-            var uiRenderSystem = new UIRenderSystem(100);
-            _scene.Add(uiRenderSystem); // draws in PostRender after RenderingSystem (order = -100)
+            //2d
+            var uiRenderSystem = new UIRenderSystem(-100);
+            _sceneManager.ActiveScene.Add(uiRenderSystem);
         }
 
         private void InitializeInputSystem()
@@ -448,59 +483,65 @@ namespace The_Depths_of_Elune
             inputSystem.Add(new GDMouseInput(bindings));
             inputSystem.Add(new GDGamepadInput(PlayerIndex.One, "Gamepad P1"));
 
-            _scene.Add(inputSystem);
+            _sceneManager.ActiveScene.Add(inputSystem);
         }
 
         private void InitializeCameras()
         {
+            Scene scene = _sceneManager.ActiveScene;
+
+            GameObject cameraGO = null;
+            Camera camera = null;
             #region Static birds-eye camera
-            _cameraGO = new GameObject(AppData.CAMERA_NAME_STATIC_BIRDS_EYE);
-            _camera = _cameraGO.AddComponent<Camera>();
-            _camera.FieldOfView = MathHelper.ToRadians(80);
+            cameraGO = new GameObject(AppData.CAMERA_NAME_STATIC_BIRDS_EYE);
+            camera = cameraGO.AddComponent<Camera>();
+            camera.FieldOfView = MathHelper.ToRadians(80);
             //ISRoT
-            _cameraGO.Transform.RotateEulerBy(new Vector3(MathHelper.ToRadians(-90), 0, 0));
-            _cameraGO.Transform.TranslateTo(Vector3.UnitY * 50);
+            cameraGO.Transform.RotateEulerBy(new Vector3(MathHelper.ToRadians(-90), 0, 0));
+            cameraGO.Transform.TranslateTo(Vector3.UnitY * 50);
 
             // _cameraGO.AddComponent<MouseYawPitchController>();
 
-            _scene.Add(_cameraGO);
+            scene.Add(cameraGO);
 
             // _camera.FieldOfView
             //TODO - add camera
             #endregion
 
             #region Third-person camera
-            _cameraGO = new GameObject(AppData.CAMERA_NAME_THIRD_PERSON);
-            _camera = _cameraGO.AddComponent<Camera>();
+            cameraGO = new GameObject(AppData.CAMERA_NAME_THIRD_PERSON);
+            camera = cameraGO.AddComponent<Camera>();
 
             var thirdPersonController = new ThirdPersonController();
             thirdPersonController.TargetName = AppData.PLAYER_NAME;
             thirdPersonController.ShoulderOffset = 0;
             thirdPersonController.FollowDistance = 50;
             thirdPersonController.RotationDamping = 20;
-            _cameraGO.Transform.SetParent(playerParent);
-            _scene.Add(_cameraGO);
+            cameraGO.AddComponent(thirdPersonController);
+            scene.Add(cameraGO);
             #endregion
+
+
 
             #region First-person camera
-            _cameraGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON);
+            cameraGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON);
 
-            _cameraGO.Transform.SetParent(playerParent);
-            _cameraGO.Transform.TranslateTo(new Vector3(0, 4.5f, 3));
+            cameraGO.Transform.SetParent(playerParent);
+            cameraGO.Transform.TranslateTo(new Vector3(0, 4.5f, 3));
 
-            _camera = _cameraGO.AddComponent<Camera>();
-            _camera.FarPlane = 1000;
-            _camera.AspectRatio = (float)_graphics.PreferredBackBufferWidth / _graphics.PreferredBackBufferHeight;
+            camera = cameraGO.AddComponent<Camera>();
+            camera.FarPlane = 1000;
+            camera.AspectRatio = (float)_graphics.PreferredBackBufferWidth / _graphics.PreferredBackBufferHeight;
+            cameraGO.AddComponent<CameraImpulseListener>();
+            //cameraGO.AddComponent<MouseYawPitchController>();
 
-            //_cameraGO.AddComponent<MouseYawPitchController>();
 
+            // Add it to the scene
+            scene.Add(cameraGO);
             #endregion
 
-            _scene.Add(_cameraGO);
+            scene.SetActiveCamera(AppData.CAMERA_NAME_FIRST_PERSON);
 
-            var theCamera = _scene.Find(go => go.Name.Equals(AppData.CAMERA_NAME_FIRST_PERSON)).GetComponent<Camera>(); 
-            ////Obviously, since we have _camera we could also just use the line below 
-            _scene.SetActiveCamera(theCamera);
         }
 
         /// <summary>
@@ -516,17 +557,18 @@ namespace The_Depths_of_Elune
 
             // Dramatised fast drift at 2 deg/sec. 
             rot._rotationSpeedInRadiansPerSecond = MathHelper.ToRadians(2f);
-            _scene.Add(_skyParent);
+            _sceneManager.ActiveScene.Add(_skyParent);
         }
 
         private void InitializeSkyBox(int scale = 50)
         {
+            Scene scene = _sceneManager.ActiveScene;
             GameObject gameObject = null;
             MeshFilter meshFilter = null;
             MeshRenderer meshRenderer = null;
 
             // Find the sky parent object to attach sky to so sky rotates
-            GameObject skyParent = _scene.Find((GameObject go) => go.Name.Equals("SkyParent"));
+            GameObject skyParent = scene.Find((GameObject go) => go.Name.Equals("SkyParent"));
 
             // back
             gameObject = new GameObject("back");
@@ -537,7 +579,7 @@ namespace The_Depths_of_Elune
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicUnlit;
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("sky");
-            _scene.Add(gameObject);
+            scene.Add(gameObject);
 
             //set parent to allow rotation
             gameObject.Transform.SetParent(skyParent.Transform);
@@ -552,7 +594,7 @@ namespace The_Depths_of_Elune
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicUnlit;
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("sky");
-            _scene.Add(gameObject);
+            scene.Add(gameObject);
 
             //set parent to allow rotation
             gameObject.Transform.SetParent(skyParent.Transform);
@@ -568,7 +610,7 @@ namespace The_Depths_of_Elune
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicUnlit;
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("sky");
-            _scene.Add(gameObject);
+            scene.Add(gameObject);
 
             //set parent to allow rotation
             gameObject.Transform.SetParent(skyParent.Transform);
@@ -583,7 +625,7 @@ namespace The_Depths_of_Elune
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicUnlit;
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("sky");
-            _scene.Add(gameObject);
+            scene.Add(gameObject);
 
             //set parent to allow rotation
             gameObject.Transform.SetParent(skyParent.Transform);
@@ -598,7 +640,7 @@ namespace The_Depths_of_Elune
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicLit;
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("sky");
-            _scene.Add(gameObject);
+            scene.Add(gameObject);
 
             //set parent to allow rotation
             gameObject.Transform.SetParent(skyParent.Transform);
@@ -642,7 +684,7 @@ namespace The_Depths_of_Elune
             rigidBody.BodyType = BodyType.Static;
             gameObject.IsStatic = true;
 
-            _scene.Add(gameObject);
+            _sceneManager.ActiveScene.Add(gameObject);
         }
 
         private void InitializeUI()
@@ -661,14 +703,15 @@ namespace The_Depths_of_Elune
             var uiFont = _fontDictionary.Get("mouse_reticle_font");
 
             // Reticle (cursor): always on top
-            var reticle = new UIReticleRenderer(reticleAtlas);
+            var reticle = new UIReticle(reticleAtlas);
             reticle.Origin = reticleAtlas.GetCenter();
             reticle.SourceRectangle = null;
             reticle.Scale = new Vector2(0.1f, 0.1f);
             reticle.RotationSpeedDegPerSec = 55;
             reticle.LayerDepth = UILayer.Cursor;
             uiGO.AddComponent(reticle);
-            _scene.Add(uiGO);
+
+            _sceneManager.ActiveScene.Add(uiGO);
 
             // Hide mouse since reticle will take its place
             IsMouseVisible = false;
@@ -677,6 +720,7 @@ namespace The_Depths_of_Elune
         #region UI Dialogue
         private void InitializeUIDialogue()
         {
+            Scene _scene = _sceneManager.ActiveScene;
             var dialogueFont = _fontDictionary.Get("menuFont");
             var nameFont = _fontDictionary.Get("dialoguefont");
 
@@ -705,10 +749,10 @@ namespace The_Depths_of_Elune
             _dialogueBox = new DialogueBox(nameFont,dialogueFont, dialogueTexture, GraphicsDevice, dialogueBox,portraits);
 
             var dialogueGO = new GameObject("dialogueBox");
-            _dialogueManager = new DialogueManager(_dialogueBox);
-            dialogueGO.AddComponent(_dialogueManager);
             dialogueGO.AddComponent(_dialogueBox);
 
+            _dialogueManager = new DialogueManager(_dialogueBox);
+            dialogueGO.AddComponent(_dialogueManager);
             _scene.Add(dialogueGO);
         }
         #endregion
@@ -737,7 +781,7 @@ namespace The_Depths_of_Elune
             meshRenderer.Material = _matBasicLit;
             meshRenderer.Overrides.MainTexture = texture;
 
-            _scene.Add(gameObject);
+            _sceneManager.ActiveScene.Add(gameObject);
 
             return gameObject;
         }
@@ -749,9 +793,6 @@ namespace The_Depths_of_Elune
             Time.Update(gameTime);
 
             //Time.TimeScale = 0;
-
-            //update Scene
-            _scene.Update(Time.DeltaTimeSecs);
 
             #endregion
 
@@ -767,8 +808,6 @@ namespace The_Depths_of_Elune
         {
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
 
-            //just as called update, we now have to call draw to call the draw in the renderingsystem
-            _scene.Draw(Time.DeltaTimeSecs);
 
             base.Draw(gameTime);
         }
@@ -858,19 +897,30 @@ namespace The_Depths_of_Elune
 
         private void DemoOrchestrationSystem()
         {
-            var orchestrator = _scene.GetSystem<OrchestrationSystem>().Orchestrator;
+            var orchestrator = _sceneManager.ActiveScene.GetSystem<OrchestrationSystem>().Orchestrator;
 
             bool isPressed = _newKBState.IsKeyDown(Keys.O) && !_oldKBState.IsKeyDown(Keys.O);
             if (isPressed)
             {
+                //orchestrator.Build("my first sequence")
+                //   .Do(() =>
+                //   {
+                //       var textObj = _sceneManager.ActiveScene.Find("init_texture");
+                //       // var textObj = _scene.Find("init_texture");
+                //       textObj.Enabled = false;
+                //   })
+                //   .WaitSeconds(2)
+                //   .Do()
+                //   .Register();
+
                 orchestrator.Build("my first sequence")
                     .WaitSeconds(2)
-                    .Publish(new CameraChangeEvent(AppData.CAMERA_NAME_FIRST_PERSON))
+                    .Publish(new CameraEvent(AppData.CAMERA_NAME_FIRST_PERSON))
                     .WaitSeconds(2)
                     .Publish(new PlaySfxEvent("SFX_UI_Click_Designed_Pop_Generic_1", 1, false, null))
                     .Register();
 
-                orchestrator.Start("my first sequence", _scene, EngineContext.Instance);
+                orchestrator.Start("my first sequence", _sceneManager.ActiveScene, EngineContext.Instance);
             }
 
             bool isIPressed = _newKBState.IsKeyDown(Keys.I) && !_oldKBState.IsKeyDown(Keys.I);
@@ -939,7 +989,7 @@ namespace The_Depths_of_Elune
             bool isFirst = _newKBState.IsKeyDown(Keys.D1) && !_oldKBState.IsKeyDown(Keys.D1);
             if (isFirst)
             {
-                events.Post(new CameraChangeEvent(AppData.CAMERA_NAME_FIRST_PERSON));
+                events.Post(new CameraEvent(AppData.CAMERA_NAME_FIRST_PERSON));
                 events.Publish(new PlaySfxEvent("SFX_UI_Click_Designed_Pop_Generic_1",
                   1, false, null));
             }
@@ -947,7 +997,7 @@ namespace The_Depths_of_Elune
             bool isThird = _newKBState.IsKeyDown(Keys.D2) && !_oldKBState.IsKeyDown(Keys.D2);
             if (isThird)
             {
-                events.Post(new CameraChangeEvent(AppData.CAMERA_NAME_THIRD_PERSON));
+                events.Post(new CameraEvent(AppData.CAMERA_NAME_THIRD_PERSON));
                 events.Publish(new PlaySfxEvent("SFX_UI_Click_Designed_Pop_Mallet_Open_1",
                 1, false, null));
             }
@@ -1014,7 +1064,7 @@ namespace The_Depths_of_Elune
             meshRenderer.Material = _matBasicLit; //enable lighting for the crate
             meshRenderer.Overrides.MainTexture = _textureDictionary.Get("crate1");
 
-            _scene.Add(gameObject);
+            _sceneManager.ActiveScene.Add(gameObject);
 
             // Add box collider (1x1x1 cube)
             var collider = gameObject.AddComponent<BoxCollider>();
@@ -1045,6 +1095,7 @@ namespace The_Depths_of_Elune
 
         private void InitializeCharacters()
         {
+            Scene _scene = _sceneManager.ActiveScene;
             //celeste
             GameObject celeste = new GameObject("celeste");
 
@@ -1062,7 +1113,7 @@ namespace The_Depths_of_Elune
 
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("celeste_texture");
-            _scene.Add(celeste);
+            _sceneManager.ActiveScene.Add(celeste);
             //Khaslana
             GameObject khaslana = new GameObject("khaslana");
 
@@ -1079,7 +1130,7 @@ namespace The_Depths_of_Elune
 
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("khaslana_texture");
-            _scene.Add(khaslana);
+            _sceneManager.ActiveScene.Add(khaslana);
 
             //mimic         
             GameObject mimic = new GameObject("mimic");
@@ -1092,7 +1143,7 @@ namespace The_Depths_of_Elune
 
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
-            _scene.Add(mimic);
+            _sceneManager.ActiveScene.Add(mimic);
 
             //chest        
             GameObject chest = new GameObject("chest");
@@ -1105,7 +1156,7 @@ namespace The_Depths_of_Elune
 
             // Per-object properties via the overrides block
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("chest_texture");
-            _scene.Add(chest);
+            _sceneManager.ActiveScene.Add(chest);
 
             //chest closed      
             GameObject chestClosed = new GameObject("chestClosed");
@@ -1159,7 +1210,7 @@ namespace The_Depths_of_Elune
 
                 }
 
-                _scene.Add(chestGO);
+                _sceneManager.ActiveScene.Add(chestGO);
                 //temp to initialize
                 mimicController = chestController;
 
@@ -1224,7 +1275,7 @@ namespace The_Depths_of_Elune
 
                     }
 
-                    _scene.Add(doorGO);
+                    _sceneManager.ActiveScene.Add(doorGO);
                 }
             
                 else
@@ -1262,7 +1313,7 @@ namespace The_Depths_of_Elune
 
                     }
 
-                    _scene.Add(doorGO);
+                    _sceneManager.ActiveScene.Add(doorGO);
                 }
             }
         }
@@ -1278,7 +1329,7 @@ namespace The_Depths_of_Elune
             textureRenderer.Material = _char;
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
 
-            _scene.Add(MainBackWall);
+            _sceneManager.ActiveScene.Add(MainBackWall);
 
 
             //Ceiling Main
@@ -1290,7 +1341,7 @@ namespace The_Depths_of_Elune
             textureRenderer.Material = _char;
             textureRenderer.Overrides.MainTexture = _textureDictionary.Get("WallBrick");
 
-            _scene.Add(CeilingMainRoom);
+            _sceneManager.ActiveScene.Add(CeilingMainRoom);
 
 
             var SideDoorWalls = new[]
@@ -1322,7 +1373,7 @@ namespace The_Depths_of_Elune
                 rigidBody.BodyType = BodyType.Static;
                 wallGO.IsStatic = true;
 
-                _scene.Add(wallGO);
+                _sceneManager.ActiveScene.Add(wallGO);
             }
 
             var Walls = new[]
@@ -1368,7 +1419,7 @@ namespace The_Depths_of_Elune
 
 
 
-                _scene.Add(wallGO);
+                _sceneManager.ActiveScene.Add(wallGO);
             }
 
             var Ceilings = new[]
@@ -1393,13 +1444,14 @@ namespace The_Depths_of_Elune
 
 
 
-                _scene.Add(wallGO);
+                _sceneManager.ActiveScene.Add(wallGO);
             }
 
 
         }
         private void ReplaceChestModel(ChestController controller)
         {
+            Scene _scene = _sceneManager.ActiveScene;
             mimicController = controller;
             //removing the chest from the scene for replacement
             _scene.Remove(controller.GameObject);
@@ -1412,7 +1464,7 @@ namespace The_Depths_of_Elune
                 var renderer = newChest.AddComponent<MeshRenderer>();
                 renderer.Material = _char;
 
-                _scene.Add(newChest);
+                _sceneManager.ActiveScene.Add(newChest);
             }
             else
             {
@@ -1423,7 +1475,7 @@ namespace The_Depths_of_Elune
                 // give it renderer
                 var renderer = newChest.AddComponent<MeshRenderer>();
                 renderer.Material = _char;
-                _scene.Add(newChest);
+                _sceneManager.ActiveScene.Add(newChest);
             }
 
         }
@@ -1431,6 +1483,7 @@ namespace The_Depths_of_Elune
 
         private void ReplaceDoorModel(DoorController controller)
         {
+            Scene _scene = _sceneManager.ActiveScene;
             //remove the object from scene
             _scene.Remove(controller.GameObject);
 
@@ -1443,7 +1496,7 @@ namespace The_Depths_of_Elune
                     // give it renderer
                     var rend = newDoor.AddComponent<MeshRenderer>();
                     rend.Material = _matt;
-                    _scene.Add(newDoor);
+                    _sceneManager.ActiveScene.Add(newDoor);
                 }
                 else
                 {
@@ -1458,7 +1511,7 @@ namespace The_Depths_of_Elune
                     // give it renderer
                     var rend = newDoor.AddComponent<MeshRenderer>();
                     rend.Material = _matt;
-                    _scene.Add(newDoor);
+                    _sceneManager.ActiveScene.Add(newDoor);
                 }
                 else
                 {
@@ -1481,7 +1534,7 @@ namespace The_Depths_of_Elune
             var meshRenderer = go.AddComponent<MeshRenderer>();
             meshRenderer.Material = _matBasicLit;
             meshRenderer.Overrides.MainTexture = texture;
-            _scene.Add(go);
+            _sceneManager.ActiveScene.Add(go);
 
 
             // Add box collider (1x1x1 cube)
