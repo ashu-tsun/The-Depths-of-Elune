@@ -137,10 +137,10 @@ namespace The_Depths_of_Elune
             InitializeSkyBox(scale);
             InitializeCollidableGround(scale);
 
-
-            #region Demos
-            DemoPlaySoundEffect();
+            //Initialize UI
             InitializeUI();
+
+            //Initialize Menu Manager
             InitializeMenuManager();
 
             // Set the active scene
@@ -148,23 +148,17 @@ namespace The_Depths_of_Elune
 
             // Camera-demos
             InitializeAnimationCurves();
+
+            //Load in assets
             LoadFromJSON();
+
+            //Build Characters / Chests
             InitializeCharacters();
+
+            //Build Room
             InitializeRoom();
-            DemoOrchestrationSystem();
-            
-            //Main Room
-            DemoCollidableModel(new Vector3(0, 40, 0), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f), "FullMoon", "Sigil_Full");
-            DemoCollidableModel(new Vector3(20, 0, 20), new Vector3(-90, 0, 0), new Vector3(0.3f, 0.3f, 0.3f), "GibSigil", "Sigil_Full");
 
-
-            #endregion
-
-
-
-            // Setup menu
-            //InitializeMenu();
-
+            //Set Game state conditions
             SetWinConditions();
 
             #endregion
@@ -172,6 +166,7 @@ namespace The_Depths_of_Elune
             base.Initialize();
         }
 
+        //Unsure if needed for rn
         private void SetPauseShowMenu()
         {
             // Give scenemanager the events reference so that it can publish the pause event
@@ -257,12 +252,16 @@ namespace The_Depths_of_Elune
                 //raise event to set sound
             };
 
+            //Event for wanting to retry level
             _menuManager.RetryRequested += () =>
             {
                 _sceneManager.Paused = false;
+                //Hide the menu
                 _menuManager.HideMenus();
+                //TO DO add restart
             };
 
+            //Subscribe to event to show the death and win screens
             EngineContext.Instance.Events.Subscribe<showLostEvent>(e =>
             {
                 _menuManager.ShowDeathMenu();
@@ -276,20 +275,12 @@ namespace The_Depths_of_Elune
             });
         }
 
-
-        private void DemoPlaySoundEffect()
-        {
-            _soundEffect = _soundDictionary.Get("secret_door");
-        }
-
-
-
         private void InitializePlayer()
         {
             playerParent = new GameObject("PlayerParent");
             playerParent.AddComponent<KeyboardWASDController>();    
             playerParent.AddComponent<MouseYawPitchController>(); 
-            playerParent.Transform.TranslateTo(new Vector3(0, 0, 20)); 
+            playerParent.Transform.TranslateTo(new Vector3(0, 0, 0)); 
             
             // Listen for damage events on the player
             playerParent.AddComponent<DamageEventListener>(); 
@@ -300,7 +291,7 @@ namespace The_Depths_of_Elune
             //GameObject playerModel = InitializeModel(new Vector3(0, 0, 0), new Vector3(-90, 0, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", AppData.PLAYER_NAME); 
             
             var playerCollider = playerParent.AddComponent<BoxCollider>(); 
-            playerCollider.Size = new Vector3(1, 2, 1); 
+            playerCollider.Size = new Vector3(3, 4.5f, 3); 
 
             var playerRb = playerParent.AddComponent<RigidBody>(); 
             playerRb.BodyType = BodyType.Kinematic; playerRb.Mass = 1f; 
@@ -462,7 +453,7 @@ namespace The_Depths_of_Elune
         private void InitializeScene()
         {
             // Make a scene that will store all drawn objects and systems for that level
-            var scene = new Scene(EngineContext.Instance, "outdoors - level 1");
+            var scene = new Scene(EngineContext.Instance, "dungeon - main level");
 
             // Add each new scene into the manager
             _sceneManager.AddScene(AppData.LEVEL_1_NAME, scene);
@@ -882,14 +873,16 @@ namespace The_Depths_of_Elune
             #region Core
             Time.Update(gameTime);
 
-            //Time.TimeScale = 0;
-
             #endregion
             _newKBState = Keyboard.GetState();
-            // DemoStuff();
-            DemoToggleFullscreen();
+
+            //Check for these
+            ToggleFullscreen();
+            CameraSwitch();
+
             checkDialogue();
-            SigilPickup();    
+            SigilPickup();
+            
             _oldKBState = _newKBState;
 
             base.Update(gameTime);
@@ -1004,11 +997,14 @@ namespace The_Depths_of_Elune
         {
             System.Diagnostics.Debug.WriteLine($"Old state was {oldState} and new state is {newState}");
 
+            //If the player has interacted with a mimic
             if (newState == GameOutcomeState.Lost)
             {
                 var orchestrator = _sceneManager.ActiveScene.GetSystem<OrchestrationSystem>().Orchestrator;
                 orchestrator.Build("death sequence")
+                    //Dont do it immediately
                     .WaitSeconds(2.5f)
+                    //Use an event to place the death screen
                     .Publish(new showLostEvent())
                     .Register();
 
@@ -1031,54 +1027,6 @@ namespace The_Depths_of_Elune
 
                 }
             }
-        }
-        //Keep this for reference to stuff we wanna add
-        private void DemoStuff()
-        {
-            _newKBState = Keyboard.GetState();
-           // DemoEventPublish();
-            DemoCameraSwitch();
-            DemoToggleFullscreen();
-            //DemoAudioSystem();
-            //DemoOrchestrationSystem();
-            _oldKBState = _newKBState;
-        }
-
-        private void DemoOrchestrationSystem()
-        {
-            var orchestrator = _sceneManager.ActiveScene.GetSystem<OrchestrationSystem>().Orchestrator;
-
-            bool isPressed = _newKBState.IsKeyDown(Keys.O) && !_oldKBState.IsKeyDown(Keys.O);
-            if (isPressed)
-            {
-                //orchestrator.Build("my first sequence")
-                //   .Do(() =>
-                //   {
-                //       var textObj = _sceneManager.ActiveScene.Find("init_texture");
-                //       // var textObj = _scene.Find("init_texture");
-                //       textObj.Enabled = false;
-                //   })
-                //   .WaitSeconds(2)
-                //   .Do()
-                //   .Register();
-
-                orchestrator.Build("my first sequence")
-                    .WaitSeconds(2)
-                    .Publish(new CameraEvent(AppData.CAMERA_NAME_FIRST_PERSON))
-                    .WaitSeconds(2)
-                    .Publish(new PlaySfxEvent("SFX_UI_Click_Designed_Pop_Generic_1", 1, false, null))
-                    .Register();
-
-                orchestrator.Start("my first sequence", _sceneManager.ActiveScene, EngineContext.Instance);
-            }
-
-            bool isIPressed = _newKBState.IsKeyDown(Keys.I) && !_oldKBState.IsKeyDown(Keys.I);
-            if (isIPressed)
-                orchestrator.Pause("my first sequence");
-
-            bool isPPressed = _newKBState.IsKeyDown(Keys.P) && !_oldKBState.IsKeyDown(Keys.P);
-            if (isPPressed)
-                orchestrator.Resume("my first sequence");
         }
 
         private void DemoAudioSystem()
@@ -1124,14 +1072,14 @@ namespace The_Depths_of_Elune
             }
         }
 
-        private void DemoToggleFullscreen()
+        private void ToggleFullscreen()
         {
             bool togglePressed = _newKBState.IsKeyDown(Keys.F5) && !_oldKBState.IsKeyDown(Keys.F5);
             if (togglePressed)
                 _graphics.ToggleFullScreen();
         }
 
-        private void DemoCameraSwitch()
+        private void CameraSwitch()
         {
             var events = EngineContext.Instance.Events;
 
@@ -1152,40 +1100,6 @@ namespace The_Depths_of_Elune
             }
         }
 
-        private void DemoEventPublish()
-        {
-            // F2: publish a test DamageEvent
-            if (_newKBState.IsKeyDown(Keys.F6) && !_oldKBState.IsKeyDown(Keys.F6))
-            {
-                // Simple “debug” damage example
-                var hitPos = new Vector3(0, 5, 0); //some fake position
-                _damageAmount++;
-
-                var damageEvent = new DamageEvent(_damageAmount, DamageEvent.DamageType.Strength,
-                    "Plasma rifle", AppData.PLAYER_NAME, hitPos, false);
-
-                EngineContext.Instance.Events.Post(damageEvent);
-            }
-
-            // Raise inventory event
-            if (_newKBState.IsKeyDown(Keys.E) && !_oldKBState.IsKeyDown(Keys.E))
-            {
-                var inventoryEvent = new GDEngine.Core.Components.InventoryEvent();
-                inventoryEvent.ItemType = ItemType.Weapon;
-                inventoryEvent.Value = 10;
-                EngineContext.Instance.Events.Publish(inventoryEvent);
-            }
-
-            if (_newKBState.IsKeyDown(Keys.L) && !_oldKBState.IsKeyDown(Keys.L))
-            {
-                var inventoryEvent = new GDEngine.Core.Components.InventoryEvent();
-                inventoryEvent.ItemType = ItemType.Lore;
-                inventoryEvent.Value = 0;
-                EngineContext.Instance.Events.Publish(inventoryEvent);
-            }
-
-        }
-
         private void LoadFromJSON()
         {
             var relativeFilePathAndName = "assets/data/single_model_spawn.json";
@@ -1195,52 +1109,6 @@ namespace The_Depths_of_Elune
             //load multiple models
             foreach (var d in JSONSerializationUtility.LoadData<ModelSpawnData>(Content, relativeFilePathAndName))
                 InitializeModel(d.Position, d.RotationDegrees, d.Scale, d.TextureName, d.ModelName, d.ObjectName);
-        }
-
-        private void DemoCollidablePrimitiveObject(Vector3 position, Vector3 scale)
-        {
-            GameObject gameObject = null;
-            MeshFilter meshFilter = null;
-            MeshRenderer meshRenderer = null;
-
-            gameObject = new GameObject("test crate textured cube");
-            gameObject.Transform.TranslateTo(position);
-            gameObject.Transform.ScaleTo(scale);
-
-            meshFilter = MeshFilterFactory.CreateCubeTexturedLit(_graphics.GraphicsDevice);
-            gameObject.AddComponent(meshFilter);
-
-            meshRenderer = gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.Material = _matBasicLit; //enable lighting for the crate
-            meshRenderer.Overrides.MainTexture = _textureDictionary.Get("crate1");
-
-            _sceneManager.ActiveScene.Add(gameObject);
-
-            // Add box collider (1x1x1 cube)
-            var collider = gameObject.AddComponent<BoxCollider>();
-            collider.Size = scale;
-            collider.Center = new Vector3(0, 0, 0);
-
-            // Add rigidbody (Dynamic so it falls)
-            var rigidBody = gameObject.AddComponent<RigidBody>();
-            rigidBody.BodyType = BodyType.Dynamic;
-            rigidBody.Mass = 1.0f;
-            rigidBody.UseGravity = true;
-
-            //#region Demo - Curve and Input
-            //var posRotController = new PositionRotationController
-            //{
-            //    RotationCurve = _animationRotationCurve,
-            //    PositionCurve = _animationPositionCurve
-            //};
-            //gameObject.AddComponent(posRotController);
-
-            ////demo the new input system support for keyboard, mouse and gamepad
-            //gameObject.AddComponent(new InputReceiverComponent());
-
-            //#endregion
-
-            //  testCrateGO.Layer = LayerMask.World;
         }
 
         private void InitializeCharacters()
@@ -1600,6 +1468,10 @@ namespace The_Depths_of_Elune
                 _sceneManager.ActiveScene.Add(wallGO);
             }
 
+            //Spawn sigils Main Room
+            spawnSigil(new Vector3(0, 40, 0), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f), "FullMoon", "Sigil_Full");
+            spawnSigil(new Vector3(20, 0, 20), new Vector3(-90, 0, 0), new Vector3(0.3f, 0.3f, 0.3f), "GibSigil", "Sigil_Full");
+
 
         }
         private void ReplaceChestModel(ChestController controller)
@@ -1675,7 +1547,7 @@ namespace The_Depths_of_Elune
                 }
             }
         }
-        private void DemoCollidableModel(Vector3 position, Vector3 eulerRotationDegrees, Vector3 scale, string modelName, string sigilName)
+        private void spawnSigil(Vector3 position, Vector3 eulerRotationDegrees, Vector3 scale, string modelName, string sigilName)
         {
             var go = new GameObject(sigilName);
             go.Transform.TranslateTo(position);
@@ -1722,7 +1594,7 @@ namespace The_Depths_of_Elune
         private void spawnSigilChest()
         {
             //Mimic Room
-            DemoCollidableModel(new Vector3(-45.2f, 0, 3.2f), new Vector3(-90, 135, 0), new Vector3(0.5f, 0.5f, 0.5f), "DarkMoon", "Sigil_Dark");
+            spawnSigil(new Vector3(-45.2f, 0, 3.2f), new Vector3(-90, 135, 0), new Vector3(0.5f, 0.5f, 0.5f), "DarkMoon", "Sigil_Dark");
         }
 
         private void SigilPickup()

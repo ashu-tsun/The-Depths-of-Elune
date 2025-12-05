@@ -55,7 +55,7 @@ namespace GDEngine.Core.Components.Controllers
         public bool HasJustOpened { get; set; } = false;
 
         //range for interacting with door
-        public float Range { get; set; } = 10.0f;
+        public float Range { get; set; } = 8.0f;
 
         public Scene? Scene { get => _scene; set => _scene = value; }
 
