@@ -136,8 +136,6 @@ namespace GDEngine.Core.Components.Controllers
             if (!IsReal)
             {
                 TriggerDeath();
-
-               
             }
             if(IsReal)
             {
@@ -169,8 +167,8 @@ namespace GDEngine.Core.Components.Controllers
             dialogue.Add(new DialogueLine("Elysia", "What is the hells is that?"));
             DialogueManager.StartDialogue(dialogue);
 
-                gameLost = true;
-                System.Diagnostics.Debug.WriteLine("ahhhh");
+            gameLost = true;
+            System.Diagnostics.Debug.WriteLine("ahhhh");
         }
 
         private void ChangeToOpenedModel()

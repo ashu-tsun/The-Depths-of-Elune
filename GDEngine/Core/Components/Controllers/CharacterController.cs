@@ -41,7 +41,7 @@ namespace GDEngine.Core.Components.Controllers
 
         public bool gameWon { get; set; }
         //Range for interaction
-        public float Range { get; set; } = 5.0f;
+        public float Range { get; set; } = 8.0f;
         //Reference to the scene
         public Scene? Scene { get => _scene; set => _scene = value; }
         //The dialogue manager, to allow different dialogue to play and render
@@ -173,7 +173,7 @@ namespace GDEngine.Core.Components.Controllers
                 else if (timesSpoken % 2 == 0)
                 {
                     System.Diagnostics.Debug.WriteLine("Talked to Khaslana for the " + timesSpoken + " time");
-                    //dialogue.Add(new DialogueLine("Khaslana", "Let's get out of here!"));
+                    dialogue.Add(new DialogueLine("Khaslana", "Let's get out of here!"));
                     gameWon = true;
 
                 }

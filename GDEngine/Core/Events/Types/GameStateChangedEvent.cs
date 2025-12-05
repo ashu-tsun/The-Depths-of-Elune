@@ -45,4 +45,12 @@
     public sealed class GameLostEvent
     {
     }
+
+    public sealed class showLostEvent
+    {
+    }
+
+    public sealed class showWonEvent
+    {
+    }
 }

@@ -36,6 +36,7 @@ namespace GDEngine.Core.Managers
         private UIMenuPanel? _audioMenuPanel;
         private UIMenuPanel? _controlsMenuPanel;
         private UIMenuPanel? _deathMenuPanel;
+        private UIMenuPanel? _wonMenuPanel;
 
         // Main menu buttons
         private UIButton? _playButton;
@@ -73,6 +74,7 @@ namespace GDEngine.Core.Managers
         private Texture2D? _audioPanelBackground;
         private Texture2D? _controlsPanelBackground;
         private Texture2D? _deathPanelBackground;
+        private Texture2D? _wonPanelBackground;
         #endregion
 
         #region Properties
@@ -138,7 +140,8 @@ namespace GDEngine.Core.Managers
          Texture2D mainPanelBackground,
          Texture2D audioPanelBackground,
          Texture2D controlsPanelBackground,
-         Texture2D deathPanelBackground)
+         Texture2D deathPanelBackground,
+         Texture2D wonPanelBackground)
         {
             if (menuScene == null)
                 throw new ArgumentNullException(nameof(menuScene));
@@ -159,7 +162,9 @@ namespace GDEngine.Core.Managers
             if (controlsPanelBackground == null)
                 throw new ArgumentNullException(nameof(controlsPanelBackground));
             if (deathPanelBackground == null)
-                throw new ArgumentNullException(nameof(controlsPanelBackground));
+                throw new ArgumentNullException(nameof(deathPanelBackground));
+            if (wonPanelBackground == null)
+                throw new ArgumentNullException(nameof(wonPanelBackground));
 
             _menuScene = menuScene;
             _buttonTexture = buttonTexture;
@@ -172,6 +177,7 @@ namespace GDEngine.Core.Managers
             _audioPanelBackground = audioPanelBackground;
             _controlsPanelBackground = controlsPanelBackground;
             _deathPanelBackground = deathPanelBackground;
+            _wonPanelBackground = wonPanelBackground;
 
             _configured = true;
 
@@ -227,7 +233,7 @@ namespace GDEngine.Core.Managers
         }
 
         /// <summary>
-        /// Show the controls menu and hide the other panels.
+        /// Show the death menu and hide the other panels.
         /// </summary>
         public void ShowDeathMenu()
         {
@@ -235,6 +241,20 @@ namespace GDEngine.Core.Managers
                 return;
 
             SetActivePanel(_deathMenuPanel);
+
+            // Hide reticle while in menu
+            SetReticleVisible(false);
+        }
+
+        /// <summary>
+        /// Show the won menu and hide the other panels.
+        /// </summary>
+        public void ShowWonMenu()
+        {
+            if (_wonMenuPanel == null)
+                return;
+
+            SetActivePanel(_wonMenuPanel);
 
             // Hide reticle while in menu
             SetReticleVisible(false);
@@ -434,7 +454,7 @@ namespace GDEngine.Core.Managers
 
             if (_deathPanelBackground != null)
             {
-                GameObject deathBgRoot = new GameObject("UI_DeathsMenuBackground");
+                GameObject deathBgRoot = new GameObject("UI_DeathMenuBackground");
                 scene.Add(deathBgRoot);
                 deathBgRoot.Transform.SetParent(_deathMenuPanel.Transform);
 
@@ -454,6 +474,41 @@ namespace GDEngine.Core.Managers
 
             // Already present, keep it
             _deathMenuPanel.RefreshChildren();
+
+            // -----------------------------------------------------------------
+            // Won menu panel
+            // -----------------------------------------------------------------
+            GameObject wonRoot = new GameObject("UI_WonMenuPanel");
+            scene.Add(wonRoot);
+
+            _wonMenuPanel = wonRoot.AddComponent<UIMenuPanel>();
+            _wonMenuPanel.PanelPosition = new Vector2(backBufferWidth - 410, 600f);
+            _wonMenuPanel.ItemSize = centreItemSize;
+            _wonMenuPanel.VerticalSpacing = spacing;
+            _wonMenuPanel.IsVisible = false;
+
+            if (_deathPanelBackground != null)
+            {
+                GameObject wonBgRoot = new GameObject("UI_WonMenuBackground");
+                scene.Add(wonBgRoot);
+                wonBgRoot.Transform.SetParent(_wonMenuPanel.Transform);
+
+                var wonBg = wonBgRoot.AddComponent<UITexture>();
+                wonBg.Texture = _wonPanelBackground;
+                wonBg.Size = viewportSize;
+                wonBg.Position = Vector2.Zero;
+                wonBg.Tint = Color.White;
+                wonBg.LayerDepth = UILayer.MenuBack;
+            }
+
+            _exitButton = _wonMenuPanel.AddButton(
+                "Exit",
+                _buttonTexture!,
+                _font!,
+                OnExitClicked);
+
+            // Already present, keep it
+            _wonMenuPanel.RefreshChildren();
         }
 
         /// <summary>
@@ -483,8 +538,12 @@ namespace GDEngine.Core.Managers
 
             if (_controlsMenuPanel != null)
                 _controlsMenuPanel.IsVisible = false;
+
             if (_deathMenuPanel != null)
                 _deathMenuPanel.IsVisible = false;
+
+            if (_wonMenuPanel != null)
+                _wonMenuPanel.IsVisible = false;
 
             // Show reticle for gameplay
             SetReticleVisible(true);

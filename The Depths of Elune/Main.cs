@@ -214,15 +214,16 @@ namespace The_Depths_of_Elune
             Texture2D trackTex = _textureDictionary.Get("volume_slider");
             Texture2D handleTex = _textureDictionary.Get("star");
             Texture2D controlsTx = _textureDictionary.Get("celeste_texture");
-            SpriteFont uiFont = _fontDictionary.Get("menufont");
+            SpriteFont uiFont = _fontDictionary.Get("dialoguefont");
             Texture2D main_menu = _textureDictionary.Get("main_menu");
             Texture2D settings_screen = _textureDictionary.Get("settings_screen");
             Texture2D controls_menu = _textureDictionary.Get("sky");
-            Texture2D death_screen =_textureDictionary.Get("death_screen");
+            Texture2D death_screen = _textureDictionary.Get("death_screen");
+            Texture2D win_screen = _textureDictionary.Get("win_screen");
 
             // Wire UIManager to the menu scene
             _menuManager.Initialize(_sceneManager.ActiveScene,
-                button, trackTex, handleTex, controlsTx, uiFont,main_menu,settings_screen,controls_menu,death_screen);
+                button, trackTex, handleTex, controlsTx, uiFont,main_menu,settings_screen,controls_menu,death_screen,win_screen);
 
             // Subscribe to high-level events
             _menuManager.PlayRequested += () =>
@@ -256,7 +257,23 @@ namespace The_Depths_of_Elune
                 //raise event to set sound
             };
 
+            _menuManager.RetryRequested += () =>
+            {
+                _sceneManager.Paused = false;
+                _menuManager.HideMenus();
+            };
 
+            EngineContext.Instance.Events.Subscribe<showLostEvent>(e =>
+            {
+                _menuManager.ShowDeathMenu();
+                _sceneManager.Paused = true;
+            });
+
+            EngineContext.Instance.Events.Subscribe<showWonEvent>(e =>
+            {
+                _menuManager.ShowWonMenu();
+                _sceneManager.Paused = true;
+            });
         }
 
 
@@ -989,26 +1006,31 @@ namespace The_Depths_of_Elune
 
             if (newState == GameOutcomeState.Lost)
             {
+                var orchestrator = _sceneManager.ActiveScene.GetSystem<OrchestrationSystem>().Orchestrator;
+                orchestrator.Build("death sequence")
+                    .WaitSeconds(2.5f)
+                    .Publish(new showLostEvent())
+                    .Register();
 
+                orchestrator.Start("death sequence", _sceneManager.ActiveScene, EngineContext.Instance);
                 System.Diagnostics.Debug.WriteLine("You lost!");
-                _menuManager.ShowDeathMenu();
-
-                _menuManager.RetryRequested += () =>
-                {
-                    _sceneManager.Paused = false;
-                    InitializePlayer();
-                    InitializeCameras();
-                    _menuManager.HideMenus();
-
-                };
-
-                //Exit();
             }
             else if (newState == GameOutcomeState.Won)
             {
                 System.Diagnostics.Debug.WriteLine("You win!");
-            }
 
+                if (newState == GameOutcomeState.Won)
+                {
+                    var orchestrator = _sceneManager.ActiveScene.GetSystem<OrchestrationSystem>().Orchestrator;
+                    orchestrator.Build("win sequence")
+                        .WaitSeconds(1f)
+                        .Publish(new showWonEvent())
+                        .Register();
+
+                    orchestrator.Start("win sequence", _sceneManager.ActiveScene, EngineContext.Instance);
+
+                }
+            }
         }
         //Keep this for reference to stuff we wanna add
         private void DemoStuff()
