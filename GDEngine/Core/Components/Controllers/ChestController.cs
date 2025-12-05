@@ -13,6 +13,7 @@ using GDEngine.Core.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using The_Depths_of_Elune.UI;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace GDEngine.Core.Components.Controllers
@@ -22,6 +23,7 @@ namespace GDEngine.Core.Components.Controllers
         #region Fields
         private Transform? _transform;
         private MeshRenderer? _mesh;
+        private DialogueManager? _dialogueManager;
         private Scene? _scene;
         private bool _playerNearby = false;
         private bool _isOpened = false;
@@ -60,6 +62,8 @@ namespace GDEngine.Core.Components.Controllers
 
         public Scene? Scene { get => _scene; set => _scene = value; }
 
+        public DialogueManager? DialogueManager { get; set; }
+
         #endregion
 
         #region Awake
@@ -91,7 +95,7 @@ namespace GDEngine.Core.Components.Controllers
             //TODO: change the keys to E after the demo code is dealt with (E gives a weapon type into inventory and breaks)
             CheckPlayerDistance();
             var inputSystem = _scene.GetSystem<InputSystem>();
-            if (!_isOpened && _playerNearby && Keyboard.GetState().IsKeyDown(Keys.F))
+            if (!_isOpened && _playerNearby && Keyboard.GetState().IsKeyDown(Keys.F) && DialogueManager != null && !DialogueManager.IsDialogueActive)
             {
                 OpenChest();
             }
@@ -134,6 +138,7 @@ namespace GDEngine.Core.Components.Controllers
                 GiveSigil();
                 //test REMOVE LATER
                 //System.Diagnostics.Debug.WriteLine("YOU GOT A SIGIL");
+
             }
             else
             {
@@ -154,14 +159,25 @@ namespace GDEngine.Core.Components.Controllers
 
             RecievedSigil = true;
             System.Diagnostics.Debug.WriteLine("Sigil recieved!");
-            
+
+            if (DialogueManager.IsDialogueActive)
+            {
+                return;
+            }
+
+            var dialogue = new List<DialogueLine>();
+            dialogue.Add(new DialogueLine("Elysia", "I collected some sort of moon sigil. This must be important."));
+            DialogueManager.StartDialogue(dialogue);
         }
 
         private void TriggerDeath()
         {
-            // TODO: death
-            gameLost = true;
-            System.Diagnostics.Debug.WriteLine("ahhhh");
+            var dialogue = new List<DialogueLine>();
+            dialogue.Add(new DialogueLine("Elysia", "What is the hells is that?"));
+            DialogueManager.StartDialogue(dialogue);
+
+                gameLost = true;
+                System.Diagnostics.Debug.WriteLine("ahhhh");
         }
 
         private void ChangeToOpenedModel()

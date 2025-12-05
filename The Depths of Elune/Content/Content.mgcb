@@ -883,6 +883,18 @@
 /processorParam:TextureFormat=Color
 /build:Assets/Textures/UI/Backgrounds/audiomenu.png;Assets/Textures/UI/Backgrounds/audiomenu
 
+#begin Assets/Textures/UI/Backgrounds/button_texture.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Backgrounds/button_texture.png;Assets/Textures/UI/Backgrounds/button_texture
+
 #begin Assets/Textures/UI/Backgrounds/controlsmenu_monkey.jpeg
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -906,6 +918,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Assets/Textures/UI/Backgrounds/controlsmenu.png;Assets/Textures/UI/Backgrounds/controlsmenu
+
+#begin Assets/Textures/UI/Backgrounds/death_screen.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Backgrounds/death_screen.png;Assets/Textures/UI/Backgrounds/death_screen
 
 #begin Assets/Textures/UI/Backgrounds/dialogue_texture.png
 /importer:TextureImporter
@@ -943,6 +967,18 @@
 /processorParam:TextureFormat=Color
 /build:Assets/Textures/UI/Backgrounds/exitmenuwithtrans.png;Assets/Textures/UI/Backgrounds/exitmenuwithtrans
 
+#begin Assets/Textures/UI/Backgrounds/main_menu.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Backgrounds/main_menu.png;Assets/Textures/UI/Backgrounds/main_menu
+
 #begin Assets/Textures/UI/Backgrounds/mainmenu_monkey.jpeg
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -966,6 +1002,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Assets/Textures/UI/Backgrounds/mainmenu.PNG;Assets/Textures/UI/Backgrounds/mainmenu
+
+#begin Assets/Textures/UI/Backgrounds/settings_screen.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Backgrounds/settings_screen.png;Assets/Textures/UI/Backgrounds/settings_screen
+
+#begin Assets/Textures/UI/Backgrounds/win_screen.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Backgrounds/win_screen.png;Assets/Textures/UI/Backgrounds/win_screen
 
 #begin Assets/Textures/UI/Controls/genericbtn.png
 /importer:TextureImporter
@@ -1014,4 +1074,16 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Assets/Textures/UI/Mouse/star.png;Assets/Textures/UI/Mouse/star
+
+#begin Assets/Textures/UI/Slider/slider.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Assets/Textures/UI/Slider/slider.png;Assets/Textures/UI/Slider/slider
 

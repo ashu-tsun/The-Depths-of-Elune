@@ -35,12 +35,14 @@ namespace GDEngine.Core.Managers
         private UIMenuPanel? _mainMenuPanel;
         private UIMenuPanel? _audioMenuPanel;
         private UIMenuPanel? _controlsMenuPanel;
+        private UIMenuPanel? _deathMenuPanel;
 
         // Main menu buttons
         private UIButton? _playButton;
         private UIButton? _audioButton;
         private UIButton? _controlsButton;
         private UIButton? _exitButton;
+
 
         // Audio menu controls
         private UIButton? _audioBackButton;
@@ -50,6 +52,9 @@ namespace GDEngine.Core.Managers
         // Controls menu controls
         private UIButton? _controlsBackButton;
         private UITexture? _controlsLayoutTexture;
+
+        //Death Menu
+        private UIButton? _retryButton;
 
         // Assets
         private Texture2D? _buttonTexture;
@@ -67,6 +72,7 @@ namespace GDEngine.Core.Managers
         private Texture2D? _mainPanelBackground;
         private Texture2D? _audioPanelBackground;
         private Texture2D? _controlsPanelBackground;
+        private Texture2D? _deathPanelBackground;
         #endregion
 
         #region Properties
@@ -88,6 +94,8 @@ namespace GDEngine.Core.Managers
         /// The game (or a higher-level system) should subscribe and call Game.Exit().
         /// </summary>
         public event Action? ExitRequested;
+
+        public event Action? RetryRequested;
 
         /// <summary>
         /// Raised when the Music slider value changes (0-1 by default).
@@ -129,7 +137,8 @@ namespace GDEngine.Core.Managers
          SpriteFont font,
          Texture2D mainPanelBackground,
          Texture2D audioPanelBackground,
-         Texture2D controlsPanelBackground)
+         Texture2D controlsPanelBackground,
+         Texture2D deathPanelBackground)
         {
             if (menuScene == null)
                 throw new ArgumentNullException(nameof(menuScene));
@@ -149,6 +158,8 @@ namespace GDEngine.Core.Managers
                 throw new ArgumentNullException(nameof(audioPanelBackground));
             if (controlsPanelBackground == null)
                 throw new ArgumentNullException(nameof(controlsPanelBackground));
+            if (deathPanelBackground == null)
+                throw new ArgumentNullException(nameof(controlsPanelBackground));
 
             _menuScene = menuScene;
             _buttonTexture = buttonTexture;
@@ -160,6 +171,7 @@ namespace GDEngine.Core.Managers
             _mainPanelBackground = mainPanelBackground;
             _audioPanelBackground = audioPanelBackground;
             _controlsPanelBackground = controlsPanelBackground;
+            _deathPanelBackground = deathPanelBackground;
 
             _configured = true;
 
@@ -214,6 +226,20 @@ namespace GDEngine.Core.Managers
             SetReticleVisible(false);
         }
 
+        /// <summary>
+        /// Show the controls menu and hide the other panels.
+        /// </summary>
+        public void ShowDeathMenu()
+        {
+            if (_deathMenuPanel == null)
+                return;
+
+            SetActivePanel(_deathMenuPanel);
+
+            // Hide reticle while in menu
+            SetReticleVisible(false);
+        }
+
         private void TryBuildMenus()
         {
             if (_built)
@@ -245,8 +271,8 @@ namespace GDEngine.Core.Managers
             Vector2 viewportSize = new Vector2(backBufferWidth, backBufferHeight);
 
             // Basic layout: top-left-ish anchor + consistent item size
-            Vector2 panelPosition = new Vector2((backBufferWidth - 390) / 2, 200f);
-            Vector2 itemSize = new Vector2(390, 96f);
+            Vector2 panelPosition = new Vector2((backBufferWidth - 330), 400f);
+            Vector2 itemSize = new Vector2(290, 63f);
             float spacing = 20f;
 
             // Main menu panel
@@ -307,9 +333,12 @@ namespace GDEngine.Core.Managers
             GameObject audioRoot = new GameObject("UI_AudioMenuPanel");
             scene.Add(audioRoot);
 
+            Vector2 centrePanelPosition = new Vector2((backBufferWidth - 390) / 2, 200f);
+            Vector2 centreItemSize = new Vector2(390, 96f);
+
             _audioMenuPanel = audioRoot.AddComponent<UIMenuPanel>();
-            _audioMenuPanel.PanelPosition = panelPosition;
-            _audioMenuPanel.ItemSize = itemSize;
+            _audioMenuPanel.PanelPosition = centrePanelPosition;
+            _audioMenuPanel.ItemSize = centreItemSize;
             _audioMenuPanel.VerticalSpacing = spacing;
             _audioMenuPanel.IsVisible = false;
 
@@ -363,8 +392,8 @@ namespace GDEngine.Core.Managers
             scene.Add(controlsRoot);
 
             _controlsMenuPanel = controlsRoot.AddComponent<UIMenuPanel>();
-            _controlsMenuPanel.PanelPosition = panelPosition;
-            _controlsMenuPanel.ItemSize = itemSize;
+            _controlsMenuPanel.PanelPosition = new Vector2(backBufferWidth-410,600f);
+            _controlsMenuPanel.ItemSize = centreItemSize;
             _controlsMenuPanel.VerticalSpacing = spacing;
             _controlsMenuPanel.IsVisible = false;
 
@@ -390,6 +419,41 @@ namespace GDEngine.Core.Managers
 
             // Already present, keep it
             _controlsMenuPanel.RefreshChildren();
+
+            // -----------------------------------------------------------------
+            // Death menu panel
+            // -----------------------------------------------------------------
+            GameObject deathRoot = new GameObject("UI_DeathMenuPanel");
+            scene.Add(deathRoot);
+
+            _deathMenuPanel = deathRoot.AddComponent<UIMenuPanel>();
+            _deathMenuPanel.PanelPosition = new Vector2(backBufferWidth - 410, 600f);
+            _deathMenuPanel.ItemSize = centreItemSize;
+            _deathMenuPanel.VerticalSpacing = spacing;
+            _deathMenuPanel.IsVisible = false;
+
+            if (_deathPanelBackground != null)
+            {
+                GameObject deathBgRoot = new GameObject("UI_DeathsMenuBackground");
+                scene.Add(deathBgRoot);
+                deathBgRoot.Transform.SetParent(_deathMenuPanel.Transform);
+
+                var deathBg = deathBgRoot.AddComponent<UITexture>();
+                deathBg.Texture = _deathPanelBackground;
+                deathBg.Size = viewportSize;
+                deathBg.Position = Vector2.Zero;
+                deathBg.Tint = Color.White;
+                deathBg.LayerDepth = UILayer.MenuBack;
+            }
+
+            _retryButton = _deathMenuPanel.AddButton(
+                "Retry",
+                _buttonTexture!,
+                _font!,
+                OnRetryClicked);
+
+            // Already present, keep it
+            _deathMenuPanel.RefreshChildren();
         }
 
         /// <summary>
@@ -419,6 +483,8 @@ namespace GDEngine.Core.Managers
 
             if (_controlsMenuPanel != null)
                 _controlsMenuPanel.IsVisible = false;
+            if (_deathMenuPanel != null)
+                _deathMenuPanel.IsVisible = false;
 
             // Show reticle for gameplay
             SetReticleVisible(true);
@@ -432,7 +498,12 @@ namespace GDEngine.Core.Managers
 
             _menuVisible = true;
         }
+        private void SetActivePanel(UIMenuPanel toShow)
+        {
+            toShow.IsVisible = true;
 
+            _menuVisible = true;
+        }
 
 
         private void OnPlayClicked()
@@ -453,6 +524,11 @@ namespace GDEngine.Core.Managers
         private void OnExitClicked()
         {
             ExitRequested?.Invoke();
+        }
+
+        private void OnRetryClicked()
+        {
+            RetryRequested?.Invoke();
         }
 
         private void OnBackToMainFromAudio()

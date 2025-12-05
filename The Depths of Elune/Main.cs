@@ -80,6 +80,7 @@ namespace The_Depths_of_Elune
         private CharacterController celesteController;
         private CharacterController khaslanaController;
         private ChestController mimicController;
+        private MenuManager _menuManager;
         #endregion
 
         #region Core Methods (Common to all games)     
@@ -140,6 +141,7 @@ namespace The_Depths_of_Elune
             #region Demos
             DemoPlaySoundEffect();
             InitializeUI();
+            InitializeMenuManager();
 
             // Set the active scene
             _sceneManager.SetActiveScene(AppData.LEVEL_1_NAME);
@@ -151,7 +153,7 @@ namespace The_Depths_of_Elune
             InitializeRoom();
             DemoOrchestrationSystem();
             //Main Room
-            DemoCollidableModel(new Vector3(0, 10, 0), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f));
+            DemoCollidableModel(new Vector3(0, 20, 0), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f));
             //Bottom Right Room
             DemoCollidableModel(new Vector3(50, 10, 13), new Vector3(-90, 0, 0), new Vector3(0.5f, 0.5f, 0.5f));
             //Top Right Room
@@ -167,9 +169,29 @@ namespace The_Depths_of_Elune
             // Setup menu
             //InitializeMenu();
 
+            SetWinConditions();
+
             #endregion
 
             base.Initialize();
+        }
+
+        private void SetPauseShowMenu()
+        {
+            // Give scenemanager the events reference so that it can publish the pause event
+            _sceneManager.EventBus = EngineContext.Instance.Events;
+            // Set paused and publish pause event
+            _sceneManager.Paused = true;
+
+            // Put all components that should be paused to sleep
+            EngineContext.Instance.Events.Subscribe<GamePauseChangedEvent>(e =>
+            {
+                bool paused = e.IsPaused;
+
+                _sceneManager.ActiveScene.GetSystem<PhysicsSystem>()?.SetPaused(paused);
+                _sceneManager.ActiveScene.GetSystem<PhysicsDebugSystem>()?.SetPaused(paused);
+                _sceneManager.ActiveScene.GetSystem<GameStateSystem>()?.SetPaused(paused);
+            });
         }
 
         private void InitializeSceneManager()
@@ -186,6 +208,61 @@ namespace The_Depths_of_Elune
             _sceneManager.ActiveScene.Add(go);
         }
 
+        private void InitializeMenuManager()
+        {
+            _menuManager = new MenuManager(this, _sceneManager);
+            Components.Add(_menuManager);
+            Time.Pause();
+
+            Texture2D button = _textureDictionary.Get("button_texture");
+            Texture2D trackTex = _textureDictionary.Get("volume_slider");
+            Texture2D handleTex = _textureDictionary.Get("star");
+            Texture2D controlsTx = _textureDictionary.Get("celeste_texture");
+            SpriteFont uiFont = _fontDictionary.Get("menufont");
+            Texture2D main_menu = _textureDictionary.Get("main_menu");
+            Texture2D settings_screen = _textureDictionary.Get("settings_screen");
+            Texture2D controls_menu = _textureDictionary.Get("sky");
+            Texture2D death_screen =_textureDictionary.Get("death_screen");
+
+            // Wire UIManager to the menu scene
+            _menuManager.Initialize(_sceneManager.ActiveScene,
+                button, trackTex, handleTex, controlsTx, uiFont,main_menu,settings_screen,controls_menu,death_screen);
+
+            // Subscribe to high-level events
+            _menuManager.PlayRequested += () =>
+            {
+                _sceneManager.Paused = false;
+                Time.Resume();
+                _menuManager.HideMenus();
+
+                //fade out menu sound
+            };
+
+            _menuManager.ExitRequested += () =>
+            {
+                Exit();
+            };
+
+            _menuManager.MusicVolumeChanged += v =>
+            {
+                // Forward to audio manager
+                System.Diagnostics.Debug.WriteLine("MusicVolumeChanged");
+
+                //raise event to set sound
+                // EngineContext.Instance.Events.Publish(new PlaySfxEvent)
+            };
+
+            _menuManager.SfxVolumeChanged += v =>
+            {
+                // Forward to audio manager
+                System.Diagnostics.Debug.WriteLine("SfxVolumeChanged");
+
+                //raise event to set sound
+            };
+
+
+        }
+
 
         private void DemoPlaySoundEffect()
         {
@@ -199,7 +276,7 @@ namespace The_Depths_of_Elune
             playerParent = new GameObject("PlayerParent");
             playerParent.AddComponent<KeyboardWASDController>();    
             playerParent.AddComponent<MouseYawPitchController>(); 
-            playerParent.Transform.TranslateTo(new Vector3(0, 0, 2)); 
+            playerParent.Transform.TranslateTo(new Vector3(0, 0, 20)); 
             
             // Listen for damage events on the player
             playerParent.AddComponent<DamageEventListener>(); 
@@ -207,7 +284,7 @@ namespace The_Depths_of_Elune
             // Adds an inventory to the player
             playerParent.AddComponent<InventoryComponent>(); 
 
-            GameObject playerModel = InitializeModel(new Vector3(0, 0, 0), new Vector3(-90, 0, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", AppData.PLAYER_NAME); 
+            //GameObject playerModel = InitializeModel(new Vector3(0, 0, 0), new Vector3(-90, 0, 0), new Vector3(1, 1, 1), "celeste_texture", "celeste", AppData.PLAYER_NAME); 
             
             var playerCollider = playerParent.AddComponent<BoxCollider>(); 
             playerCollider.Size = new Vector3(1, 2, 1); 
@@ -215,7 +292,7 @@ namespace The_Depths_of_Elune
             var playerRb = playerParent.AddComponent<RigidBody>(); 
             playerRb.BodyType = BodyType.Kinematic; playerRb.Mass = 1f; 
 
-            playerModel.Transform.SetParent(playerParent); 
+            //playerModel.Transform.SetParent(playerParent); 
             _sceneManager.ActiveScene.Add(playerParent);
         }
 
@@ -707,7 +784,7 @@ namespace The_Depths_of_Elune
             reticle.Origin = reticleAtlas.GetCenter();
             reticle.SourceRectangle = null;
             reticle.Scale = new Vector2(0.1f, 0.1f);
-            reticle.RotationSpeedDegPerSec = 55;
+            reticle.RotationSpeedDegPerSec = 10;
             reticle.LayerDepth = UILayer.Cursor;
             uiGO.AddComponent(reticle);
 
@@ -798,7 +875,6 @@ namespace The_Depths_of_Elune
 
             DemoStuff();
             checkDialogue();
-            checkGameState();
 
 
             base.Update(gameTime);
@@ -881,8 +957,61 @@ namespace The_Depths_of_Elune
 
         #endregion    }
 
-        #region Demo Methods (remove in the game)
+        #region Other Methods
 
+        private void SetWinConditions()
+        {
+            var gameStateSystem = _sceneManager.ActiveScene.GetSystem<GameStateSystem>();
+
+            // Lose condition: health < 10 AND time > 60
+            IGameCondition loseCondition =
+                GameConditions.FromPredicate("died to mimic", CheckDeath);
+
+            IGameCondition winCondition =
+            GameConditions.FromPredicate("reached khaslana", CheckWon);
+
+            // Configure GameStateSystem (no win condition yet)
+            gameStateSystem.ConfigureConditions(winCondition, loseCondition);
+            gameStateSystem.StateChanged += HandleGameStateChange;
+        }
+
+        private bool CheckDeath()
+        {
+            return mimicController.gameLost;
+        }
+
+        private bool CheckWon()
+        {
+            return khaslanaController.gameWon;
+        }
+
+        private void HandleGameStateChange(GameOutcomeState oldState, GameOutcomeState newState)
+        {
+            System.Diagnostics.Debug.WriteLine($"Old state was {oldState} and new state is {newState}");
+
+            if (newState == GameOutcomeState.Lost)
+            {
+
+                System.Diagnostics.Debug.WriteLine("You lost!");
+                _menuManager.ShowDeathMenu();
+
+                _menuManager.RetryRequested += () =>
+                {
+                    _sceneManager.Paused = false;
+                    InitializePlayer();
+                    InitializeCameras();
+                    _menuManager.HideMenus();
+
+                };
+
+                //Exit();
+            }
+            else if (newState == GameOutcomeState.Won)
+            {
+                System.Diagnostics.Debug.WriteLine("You win!");
+            }
+
+        }
         //Keep this for reference to stuff we wanna add
         private void DemoStuff()
         {
@@ -1192,6 +1321,7 @@ namespace The_Depths_of_Elune
                 chestController.ChestID = c.ID;
                 chestController.IsReal = !c.IsMimic; //real if not mimic
                 chestController.Scene = _scene;
+                chestController.DialogueManager = _dialogueManager;
 
                 //stores original transform so we can rebuild it later
                 chestController.OriginalPosition = c.Position;
@@ -1563,20 +1693,5 @@ namespace The_Depths_of_Elune
             }
         }
 
-        private void checkGameState()
-        {
-            if (khaslanaController.gameWon)
-            {
-                System.Diagnostics.Debug.WriteLine("You won");
-                khaslanaController.gameWon = false;
-            }
-
-            if(mimicController.gameLost)
-            {
-                System.Diagnostics.Debug.WriteLine("You lost");
-                mimicController.gameLost = false;
-            }
-        }
-        
     }    
 }

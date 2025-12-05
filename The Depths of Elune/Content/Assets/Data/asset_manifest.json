@@ -91,17 +91,30 @@
         },
 
         {
-            "name": "mainmenu",
-            "contentPath": "assets/textures/ui/backgrounds/mainmenu"
+            "name": "main_menu",
+            "contentPath": "assets/textures/ui/backgrounds/main_menu"
         },
         {
-            "name": "mainmenu_monkey",
-            "contentPath": "assets/textures/ui/backgrounds/mainmenu_monkey"
+            "name": "settings_screen",
+            "contentPath": "assets/textures/ui/backgrounds/settings_screen"
         },
         {
-            "name": "controlsmenu_monkey",
-            "contentPath": "assets/textures/ui/backgrounds/controlsmenu_monkey"
+            "name": "win_screen",
+            "contentPath": "assets/textures/ui/backgrounds/win_screen"
+        },
+        {
+            "name": "death_screen",
+            "contentPath": "assets/textures/ui/backgrounds/death_screen"
+        },
+        {
+            "name": "volume_slider",
+            "contentPath": "assets/textures/ui/slider/slider"
+        },
+        {
+            "name": "button_texture",
+            "contentPath": "assets/textures/ui/backgrounds/button_texture"
         }
+
     ],
     "models": [
 
