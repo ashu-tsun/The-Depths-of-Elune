@@ -220,7 +220,23 @@
         },
         {
             "name": "FullMoon",
-            "contentPath": "assets/models/FullMoon"
+            "contentPath": "assets/models/Sigils/FullMoon"
+        },
+        {
+            "name": "CresSigil",
+            "contentPath": "assets/models/Sigils/CresSigil"
+        },
+        {
+            "name": "DarkMoon",
+            "contentPath": "assets/models/Sigils/DarkMoon"
+        },
+        {
+            "name": "GibSigil",
+            "contentPath": "assets/models/Sigils/GibSigil"
+        },
+        {
+            "name": "HalfMoon",
+            "contentPath": "assets/models/Sigils/HalfMoon"
         },
         {
             "name": "CeilingMainRoom",

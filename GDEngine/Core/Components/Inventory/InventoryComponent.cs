@@ -4,7 +4,7 @@ namespace GDEngine.Core.Components
 {
     public enum ItemType : byte
     {
-        Weapon, Health, Lore, Info
+        Weapon, Health, Lore, Info, Sigil
     }
     public class InventoryComponent : Component
     {
@@ -25,12 +25,24 @@ namespace GDEngine.Core.Components
         {
             int value;
             _inventory.TryGetValue(type, out value);
-            _inventory.Add(type, value + delta);
+            _inventory[type] = value + delta;
+        }
+
+
+        //method to get the cound of item based on its type (this is used to check if player got all sigils)
+        public int GetCount(ItemType type)
+        {
+            int value = 0;
+            _inventory.TryGetValue(type, out value);
+            return value;
         }
     }
+
     public class InventoryEvent
     {
         public ItemType ItemType { get; set; }
         public int Value { get; set; }
     }
-}
+
+  }
+

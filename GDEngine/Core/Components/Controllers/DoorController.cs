@@ -62,8 +62,6 @@ namespace GDEngine.Core.Components.Controllers
         #region Awake
         protected override void Awake()
         {
-
-
             base.Awake();
         }
         #endregion
@@ -83,10 +81,9 @@ namespace GDEngine.Core.Components.Controllers
                 return;
 
             //getting the distance between door and camera so when player is near it will only open it
-            //TODO: change the keys to E after the demo code is dealt with (E gives a weapon type into inventory atm)
             CheckPlayerDistance();
             var inputSystem = _scene.GetSystem<InputSystem>();
-            if (!_isOpened && _playerNearby && Keyboard.GetState().IsKeyDown(Keys.F))
+            if (!_isOpened && _playerNearby && Keyboard.GetState().IsKeyDown(Keys.E))
             {
                 OpenDoor();
             }
@@ -117,8 +114,20 @@ namespace GDEngine.Core.Components.Controllers
             if (_isOpened)
                 return;
 
-            //TODO: after inverntory is set up change it so its not hard coded
-            if (IsLocked && ChestController.RecievedSigil && IsKhasDoor)
+            //get a reference to the player game object with inventory so we can check the count of sigils recieved to deem door openable
+            var playerGO = _scene.GameObjects.FirstOrDefault(go => go.Name == "PlayerParent");
+            var inventory = playerGO?.GetComponent<InventoryComponent>();
+            
+
+            //keeps track of the sigil count in players inventory
+            int sigilCount = 0;
+            if (inventory != null)
+            {
+                sigilCount = inventory.GetCount(ItemType.Sigil);
+            }         
+
+            //now it will unlock once all 3 sigils are picked up
+            if(IsLocked && sigilCount == 3 && IsKhasDoor)
             {
                 _isOpened = true;
                 HasJustOpened = true;
@@ -129,7 +138,7 @@ namespace GDEngine.Core.Components.Controllers
 
                 ChangeToOpenedModel();
             }
-            else if(!IsLocked )
+            if (!IsLocked)
             {
                 _isOpened = true;
                 HasJustOpened = true;
@@ -142,8 +151,16 @@ namespace GDEngine.Core.Components.Controllers
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("Door is locked.");
-                return;
+                if(IsKhasDoor)
+                {
+                    System.Diagnostics.Debug.WriteLine("Door is locked. You need 3 sigils, (you have " + sigilCount + " sigils)");
+                    return;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Door is locked.");
+                }
+               
             }
                 
         }

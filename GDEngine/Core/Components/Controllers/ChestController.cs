@@ -133,20 +133,13 @@ namespace GDEngine.Core.Components.Controllers
             System.Diagnostics.Debug.WriteLine("Chest opened");
 
 
-            if (IsReal)
-            {
-                GiveSigil();
-                //test REMOVE LATER
-                //System.Diagnostics.Debug.WriteLine("YOU GOT A SIGIL");
-
-            }
-            else
+            if (!IsReal)
             {
                 TriggerDeath();
-                //test REMOVE LATER
-                //System.Diagnostics.Debug.WriteLine("MIMIC YOU DIE");
-            }
 
+               
+            }
+           
             ChangeToOpenedModel();
         }
         #endregion
