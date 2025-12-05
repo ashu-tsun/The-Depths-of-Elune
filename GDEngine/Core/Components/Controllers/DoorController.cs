@@ -131,6 +131,7 @@ namespace GDEngine.Core.Components.Controllers
             {
                 _isOpened = true;
                 HasJustOpened = true;
+                IsLocked = false;
 
                 //test REMOVE LATER
                 System.Diagnostics.Debug.WriteLine("Door opened");
